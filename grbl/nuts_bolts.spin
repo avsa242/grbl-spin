@@ -19,10 +19,10 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
 
-
-#define MAX_INT_DIGITS 8 ' Maximum number of digits in int32 (and float)
+' Maximum number of digits in int32 (and float)
+#define MAX_INT_DIGITS 8
 
 
 ' Extracts a floating point value from a string. The following code is based loosely on
@@ -32,86 +32,76 @@
 ' Scientific notation is officially not supported by g-code, and the  character may
 ' be a g-code word on some CNC systems. So,  notation will not be recognized.
 ' NOTE: Thanks to Radu-Eosif Mihailescu for identifying the issues with using strtod.
-PUB read_float({char/str} line, {byte *}char_counter, {float *} float_ptr) | ptr, c, isnegative, intval, exp, ndigit, isdecimal
-    
-  ptr := line + byte[char_counter]
+PUB{uint8_t} read_float({char/str} line, {byte *}char_counter, {float *} float_ptr) | {char *}ptr, {unsigned char}c, {bool}isnegative, {float}fval, {uint32_t}intval, {int8_t}exp, {uint8_t}ndigit, {bool}isdecimal
 
-  ' Grab first character and increment pointer. No spaces assumed in line.
-  c := byte[ptr++]
+    ptr := line + byte[char_counter]
 
-  ' Capture initial positive/minus character
-  isnegative := FALSE
-  if (c:== "-") 
-    isnegative := true
-    c := byte[ptr++]
-  else if (c:== "+")
+    ' Grab first character and increment pointer. No spaces assumed in line.
     c := byte[ptr++]
 
+    ' Capture initial positive/minus character
+    isnegative := FALSE
+    if (c == "-")
+        isnegative := true
+        c := byte[ptr++]
+    elseif (c == "+")
+        c := byte[ptr++]
 
-  ' Extract number into fast integer. Track decimal in terms of exponent value.
-  intval := 0
-  int8_t exp := 0
-  byte ndigit := 0
-  bool isdecimal := false
-  repeat while(1) {
-    c -= "0"
-    if (c =< 9)
-      ndigit++
-      if (ndigit =< MAX_INT_DIGITS)
-        if (isdecimal)
-            exp--
-        intval := (((intval << 2) + intval) << 1) + c ' intval*10 + c
-      else
-        if (!(isdecimal))
-            exp++  ' Drop overflow digits
-      
-    else if (c == (("."-"0") & $ff)  &&  !(isdecimal))
-      isdecimal:= true
+    ' Extract number into fast integer. Track decimal in terms of exponent value.
+    intval := 0
+    exp := 0
+    ndigit := 0
+    isdecimal := false
+    repeat
+        c -= "0"
+        if (c =< 9)
+            ndigit++
+            if (ndigit =< MAX_INT_DIGITS)
+                if (isdecimal)
+                    exp--
+                intval := (((intval << 2) + intval) << 1) + c ' intval*10 + c
+            else
+                if (!(isdecimal))
+                    exp++  ' Drop overflow digits
+        elseif (c == (("."-"0") & $ff) AND !(isdecimal))
+            isdecimal:= true
+        else
+            quit
+    c := byte[ptr++]
+
+    ' Return if no digits have been read.
+    if (!ndigit)
+        return(false)
+
+    ' Convert integer into floating point.
+    fval := intval
+
+    ' Apply decimal. Should perform no more than two floating point multiplications for the
+    ' expected range of E0 to E-4.
+    if (fval <> 0)
+        repeat while (exp =< -2)
+            fval *= 0.01
+            exp += 2
+
+        if (exp < 0)
+            fval *= 0.1
+        elseif (exp > 0)
+            repeat
+                fval *= 10.0
+            while (--exp > 0)
+
+    ' Assign floating point value with correct sign.
+    if (isnegative)
+        float_ptr := -fval
     else
-      quit
+        float_ptr := fval
 
-    c:= byte[ptr++]
+    char_counter := ptr - line - 1 ' Set char_counter to next statement
 
-
-  ' Return if no digits have been read.
-  if (!ndigit)
-    return(false)
-
-  ' Convert integer into floating point.
-  {float} fval
-  fval:= intval
-
-  ' Apply decimal. Should perform no more than two floating point multiplications for the
-  ' expected range of E0 to E-4.
-  if (fval <> 0)
-    repeat while (exp =< -2)
-      fval *= 0.01
-      exp += 2
-
-    if (exp < 0)
-      fval *= 0.1
-    else if (exp > 0)
-      repeat
-        fval *= 10.0
-      while (--exp > 0)
-
-
-
-  ' Assign floating point value with correct sign.
-  if (isnegative)
-    float_ptr := -fval
-  else
-    float_ptr := fval
-
-
-  char_counter := ptr - line - 1 ' Set char_counter to next statement
-
-  return(true)
-
-
+    return(true)
 
 ' Non-blocking delay function used for general operation and suspend features.
-PUB delay_sec({float} seconds, {byte} mode) | {uint16} i
+PUB delay_sec({float} seconds, {uint8_t} mode) | {uint16} i
     
  	i := ceil(1000/DWELL_TIME_STEP*seconds)
 	repeat while (i-- > 0)
@@ -126,9 +116,6 @@ PUB delay_sec({float} seconds, {byte} mode) | {uint16} i
             return ' Bail, if safety door reopens.
 		_delay_ms(DWELL_TIME_STEP) ' Delay DWELL_TIME_STEP increment
 
-
-
-
 ' Delays variable defined milliseconds. Compiler compatibility fix for _delay_ms,
 ' which only accepts constants in future compiler releases.
 PUB delay_ms({uint16_t} ms)
@@ -136,60 +123,55 @@ PUB delay_ms({uint16_t} ms)
     repeat while ( ms-- )
         _delay_ms(1)
 
-
-
 ' Delays variable defined microseconds. Compiler compatibility fix for _delay_us,
 ' which only accepts constants in future compiler releases. Written to perform more
 ' efficiently with larger delays, as the counter adds parasitic time in each iteration.
-PUB delay_us({ulong} us)
+PUB delay_us({uint32_t} us)
 
-  repeat while (us)
-    if (us < 10)
-      _delay_us(1)
-      us--
-    else if (us < 100)
-      _delay_us(10)
-      us -= 10
-    else if (us < 1000)
-      _delay_us(100)
-      us -= 100
-    else
-      _delay_ms(1)
-      us -= 1000
+    repeat while (us)
+        if (us < 10)
+            _delay_us(1)
+            us--
+        elseif (us < 100)
+            _delay_us(10)
+            us -= 10
+        elseif (us < 1000)
+            _delay_us(100)
+            us -= 100
+        else
+            _delay_ms(1)
+            us -= 1000
 
 ' Simple hypotenuse computation function.
 PUB{float} hypot_f({float} x, {float} y)
 
     return (sqrt(x*x + y*y))
 
-
 PUB{float} convert_delta_vector_to_unit_vector({float *}vector) | idx, {float}magnitude, {float}inv_magnitude
-    
-  magnitude := 0.0
-  repeat while idx < N_AXIS'=0 idx<N_AXIS; idx++)
-    idx++
-    if (vector[idx] <> 0.0)
-      magnitude += vector[idx]*vector[idx]
 
-  magnitude := sqrt(magnitude)
-  inv_magnitude := 1.0/magnitude
+    magnitude := 0.0
+    repeat while idx < N_AXIS'=0 idx<N_AXIS; idx++)
+        idx++
+        if (vector[idx] <> 0.0)
+            magnitude += vector[idx]*vector[idx]
 
-  idx := 0
-  repeat while idx < N_AXIS' (idx=0 idx<N_AXIS; idx++)
-    idx++
-    vector[idx] *= inv_magnitude
+    magnitude := sqrt(magnitude)
+    inv_magnitude := 1.0/magnitude
 
-  return(magnitude)
+    idx := 0
+    repeat while idx < N_AXIS' (idx=0 idx<N_AXIS; idx++)
+        idx++
+        vector[idx] *= inv_magnitude
 
-
+    return(magnitude)
 
 PUB{float} limit_value_by_axis_maximum({float *}max_value, {float *}unit_vec) | {byte}idx, {float}limit_value
 
-  limit_value := SOME_LARGE_VALUE
-  idx := 0
-  repeat while idx < N_AXIS
-    idx++
-    if (unit_vec[idx] <> 0)  ' Avoid divide by zero.
-      limit_value := min(limit_value, fabs(max_value[idx]/unit_vec[idx]))
-  return(limit_value)
+    limit_value := SOME_LARGE_VALUE
+    idx := 0
+    repeat while idx < N_AXIS
+        idx++
+        if (unit_vec[idx] <> 0)  ' Avoid divide by zero.
+            limit_value := min(limit_value, fabs(max_value[idx]/unit_vec[idx]))
+    return(limit_value)
 
