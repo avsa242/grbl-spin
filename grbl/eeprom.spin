@@ -77,9 +77,9 @@ PUB eeprom_put_char({unsigned int}addr, {unsigned char} new_value ) | {char}old_
 
 	'cli ' Ensure atomic operation for the write operation.
 	
-	repeat while( EECR & (1<<EEPE) ) ' Wait for completion of previous write.
+	repeat while(EECR & (1<<EEPE)) ' Wait for completion of previous write.
 #ifndef EEPROM_IGNORE_SELFPROG
-    repeat while( SPMCSR & (1<<SELFPRGEN) ) ' Wait for completion of SPM.
+    repeat while(SPMCSR & (1<<SELFPRGEN)) ' Wait for completion of SPM.
 #endif
 	EEAR := addr ' Set EEPROM address register.
 	EECR := (1<<EERE) ' Start EEPROM read operation.
@@ -87,36 +87,36 @@ PUB eeprom_put_char({unsigned int}addr, {unsigned char} new_value ) | {char}old_
 	diff_mask := old_value ^ new_value ' Get bit differences.
 	
 	' Check if any bits are changed to  in the new value.
-	if( diff_mask & new_value ) 
+	if(diff_mask & new_value)
 		' Now we know that _some_ bits need to be erased to .
 		' Check if any bits in the new value are .
-		if( new_value <> $ff ) 
+		if(new_value <> $ff)
 			' Now we know that some bits need to be programmed to  also.
 			EEDR := new_value ' Set EEPROM data register.
 			EECR := (1<<EEMPE) | (0<<EEPM1) | (0<<EEPM0) ' Set Master Write Enalbe bit and Erase+Write mode.
 			EECR |= (1<<EEPE)  ' Start Erase+Write operation.
-		else 
+		else
 			' Now we know that all bits should be erased.
 			EECR:= (1<<EEMPE) | (1<<EEPM0) ' Set Master Write Enable bit and Erase-only mode.
 			EECR |= (1<<EEPE)  ' Start Erase-only operation.
-	else 
+	else
 		' Now we know that _no_ bits need to be erased to .
 		' Check if any bits are changed from  in the old value.
-		if( diff_mask ) 
+		if(diff_mask)
 			' Now we know that _some_ bits need to the programmed to .
-			EEDR:= new_value   ' Set EEPROM data register.
-			EECR:= (1<<EEMPE) | (1<<EEPM1)  ' Set Master Write Enable bit and Write-only mode.
+			EEDR := new_value   ' Set EEPROM data register.
+			EECR := (1<<EEMPE) | (1<<EEPM1)  ' Set Master Write Enable bit and Write-only mode.
 			EECR |= (1<<EEPE)  ' Start Write-only operation.
 	sei ' Restore interrupt flag state.
 
-' Extensions added as part of Grbl 
+' Extensions added as part of Grbl
 PUB memcpy_to_eeprom_with_checksum({unsigned int}destination, {char *}source, {unsigned int}size) | {unsigned char}checksum
 
     checksum := 0
     repeat
-        checksum:= (checksum << 1) || (checksum >> 7)
+        checksum := (checksum << 1) OR (checksum >> 7)
         checksum += byte[source] '*source
-        eeprom_put_char(destination++, byte[source++])'*(source++)) 
+        eeprom_put_char(destination++, byte[source++])'*(source++))
         size--
     while size > 0
     eeprom_put_char(destination, checksum)
@@ -126,9 +126,9 @@ PUB{int} memcpy_from_eeprom_with_checksum({char *}destination, {unsigned int} so
     data := checksum := 0
     repeat'for( size > 0; size--)
         data := eeprom_get_char(source++)
-        checksum := (checksum << 1) || (checksum >> 7)
-        checksum += data    
-        byte[destination++] := data'*(destination++):= data 
+        checksum := (checksum << 1) OR (checksum >> 7)
+        checksum += data
+        byte[destination++] := data'*(destination++):= data
         size--
     while size > 0
     return(checksum == eeprom_get_char(source))
