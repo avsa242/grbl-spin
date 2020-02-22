@@ -67,7 +67,7 @@ PUB limits_disable
 ' Returns limit state as a bit-wise uint8 variable. Each bit indicates an axis limit, where
 ' triggered is 1 and not triggered is 0. Invert mask is applied. Axes are defined by their
 ' number in bit position, i.e. Z_AXIS is (1<<2) or bit 2, and Y_AXIS is (1<<1) or bit 1.
-PUB limits_get_state | {byte}limit_state, pin, idx
+PUB{uint8_t} limits_get_state | {uint8_t}limit_state, pin, idx
 
     limit_state := 0
     pin := (LIMIT_PIN & LIMIT_MASK)
@@ -77,12 +77,11 @@ PUB limits_get_state | {byte}limit_state, pin, idx
     if (bit_isfalse(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) 
         pin ^= LIMIT_MASK 
     if (pin) 
-    
-    repeat idx from 0 to N_AXIS-1 
-        if (pin & get_limit_pin_mask(idx)) 
-            limit_state |= (1 << idx) 
+        repeat idx from 0 to N_AXIS-1 
+            if (pin & get_limit_pin_mask(idx)) 
+                limit_state |= (1 << idx) 
 #ifdef ENABLE_DUAL_AXIS
-        if (pin & (1<<DUAL_LIMIT_BIT)) 
+            if (pin & (1<<DUAL_LIMIT_BIT)) 
             limit_state |= (1 << N_AXIS) 
 #endif
     return(limit_state)
@@ -99,7 +98,7 @@ PUB limits_get_state | {byte}limit_state, pin, idx
 ' special pinout for an e-stop, but it is generally recommended to just directly connect
 ' your e-stop case to the Arduino reset pin, since it is the most correct way to do this.
 #ifndef ENABLE_SOFTWARE_DEBOUNCE
-    ISR(LIMIT_INT_vect) ' DEFAULT: Limit pin change interrupt process.  'XXX needs own cog
+PUB ISR(LIMIT_INT_vect) ' DEFAULT: Limit pin change interrupt process.  'XXX needs own cog
 
     ' Ignore limit casees if already in an alarm state or in-process of executing an alarm.
     ' When in the alarm state, Grbl should have been reset or will force a reset, so any pending
@@ -107,7 +106,7 @@ PUB limits_get_state | {byte}limit_state, pin, idx
     ' locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
     ' limit setting if their limits are constantly triggering after a reset and move their axes.
     if (sys.state <> STATE_ALARM) 
-        if (!(sys_rt_exec_alarm)) 
+        if (NOT(sys_rt_exec_alarm)) 
 #ifdef HARD_LIMIT_FORCE_STATE_CHECK
             ' Check limit pin state.
             if (limits_get_state) 
@@ -119,13 +118,17 @@ PUB limits_get_state | {byte}limit_state, pin, idx
 #endif
 #else ' OPTIONAL: Software debounce limit pin routine.
     ' Upon limit pin change, enable watchdog timer to create a short delay. 
-    ISR(LIMIT_INT_vect) 
-        if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE)  }
-    ISR(WDT_vect) ' Watchdog timer ISR
+PUB ISR(LIMIT_INT_vect) 
+
+    if (!(WDTCSR & (1<<WDIE)))
+        WDTCSR |= (1<<WDIE)
+
+PUB ISR(WDT_vect) ' Watchdog timer ISR
+
     WDTCSR &= !(1<<WDIE) ' Disable watchdog timer. 
         if (sys.state <> STATE_ALARM) 
         ' Ignore if already in alarm state. 
-            if (!(sys_rt_exec_alarm)) 
+            if (NOT(sys_rt_exec_alarm)) 
                 ' Check limit pin state. 
                 if (limits_get_state) 
                     mc_reset ' Initiate system kill.
@@ -140,34 +143,34 @@ PUB limits_get_state | {byte}limit_state, pin, idx
 ' NOTE: Only the abort realtime command can interrupt this process.
 ' TODO: Move limit pin-specific calls to a general function for portability.
 
-PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pin_dual, dual_axis_async_check, {long}dual_trigger_position, {float}fail_distance, {long}dual_fail_distance, {float}target[N_AXIS], max_travel, {byte}idx, limit_state, axislock, n_active_axis, {long}axis_position, rt_exec, set_axis_position, off_axis_position, {plan_line_data_t}plan_data, {*}pl_data
+PUB limits_go_home({byte }cycle_mask) | {plan_line_data_t } plan_data, {plan_line_data_t *} pl_data, {uint8_t}n_cycle, step_pin[N_AXIS], step_pin_dual, dual_axis_async_check, {long}dual_trigger_position, {float}fail_distance, {long}dual_fail_distance, {float}target[N_AXIS], max_travel, {uint8_t}idx, limit_state, axislock, n_active_axis, {long}axis_position, rt_exec, set_axis_position, off_axis_position, {plan_line_data_t}plan_data, {*}pl_data
 
-    if (sys.abort) 
+    if (sys.abort)
         return  ' Block if system reset has been issued.
 
   ' Initialize plan data struct for homing motion. Spindle and coolant are disabled.
-    {plan_line_data_t} plan_data
+    'plan_line_data_t plan_data
     {plan_line_data_t *}pl_data := @plan_data
     bytefill(pl_data, 0, {sizeof}plan_line_data_t)
     pl_data->condition := (PL_COND_FLAG_SYSTEM_MOTION|PL_COND_FLAG_NO_FEED_OVERRIDE)
 #ifdef USE_LINE_NUMBERS
-    pl_data->line_number:= HOMING_CYCLE_LINE_NUMBER
+    pl_data->line_number := HOMING_CYCLE_LINE_NUMBER
 #endif
 
     ' Initialize variables used for homing computations.
     n_cycle := (2*N_HOMING_LOCATE_CYCLE+1)
 #ifdef ENABLE_DUAL_AXIS
-'    byte step_pin_dual
-'    byte dual_axis_async_check
-'    long dual_trigger_position
+'    {uint8_t} step_pin_dual
+'    {uint8_t} dual_axis_async_check
+'    {int32_t} dual_trigger_position
 #if (DUAL_AXIS_SELECT == X_AXIS)
-    fail_distance := (-DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT/100.0)*settings.max_travel[Y_AXIS]
+    {float}fail_distance := (-DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT/100.0)*settings.max_travel[Y_AXIS]
 #else
-    fail_distance := (-DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT/100.0)*settings.max_travel[X_AXIS]
+    {float}fail_distance := (-DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT/100.0)*settings.max_travel[X_AXIS]
 #endif
     fail_distance := min(fail_distance, DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX)
     fail_distance := max(fail_distance, DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN)
-    dual_fail_distance := trunc(fail_distance*settings.steps_per_mm[DUAL_AXIS_SELECT])
+    dual_fail_distance := {trunc(}fail_distance*settings.steps_per_mm[DUAL_AXIS_SELECT]
     ' long dual_fail_distance:= trunc((DUAL_AXIS_HOMING_TRIGGER_FAIL_DISTANCE)*settings.steps_per_mm[DUAL_AXIS_SELECT])
 #endif
     max_travel := 0.0
@@ -175,17 +178,17 @@ PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pi
     ' Initialize step pin masks
         step_pin[idx] := get_step_pin_mask(idx)
 #ifdef COREXY
-        if ((idx==A_MOTOR)||(idx==B_MOTOR)) 
-            step_pin[idx] := (get_step_pin_mask(X_AXIS)|get_step_pin_mask(Y_AXIS)) 
+        if ((idx == A_MOTOR) OR (idx == B_MOTOR))
+            step_pin[idx] := (get_step_pin_mask(X_AXIS) | get_step_pin_mask(Y_AXIS)) 
 #endif
 
-        if (bit_istrue(cycle_mask,bit(idx))) 
+        if (bit_istrue(cycle_mask, bit(idx)))
         ' Set target based on max_travel setting. Ensure homing casees engaged with search scalar.
         ' NOTE: settings.max_travel[] is stored as a negative value.
             max_travel := max(max_travel, (-HOMING_AXIS_SEARCH_SCALAR)*settings.max_travel[idx])
 
 #ifdef ENABLE_DUAL_AXIS
-    step_pin_dual:= (1<<DUAL_STEP_BIT)
+    step_pin_dual := (1<<DUAL_STEP_BIT)
 #endif
 
     ' Set search mode with approach at seek rate to quickly engage the specified cycle_mask limit casees.
@@ -204,33 +207,33 @@ PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pi
         n_active_axis := 0
         repeat idx from 0 to N_AXIS-1
             ' Set target location for active axes and setup computation for homing rate.
-            if (bit_istrue(cycle_mask,bit(idx)))
+            if (bit_istrue(cycle_mask, bit(idx)))
                 n_active_axis++
 #ifdef COREXY
-                if (idx== X_AXIS) 
+                if (idx == X_AXIS)
                     axis_position := system_convert_corexy_to_y_axis_steps(sys_position)
-                    sys_position[A_MOTOR]:= axis_position
-                    sys_position[B_MOTOR]:= -axis_position
-                elseif (idx== Y_AXIS) 
+                    sys_position[A_MOTOR] := axis_position
+                    sys_position[B_MOTOR] := -axis_position
+                elseif (idx== Y_AXIS)
                     axis_position := system_convert_corexy_to_x_axis_steps(sys_position)
-                    sys_position[A_MOTOR]:= sys_position[B_MOTOR] = axis_position
-                else 
-                    sys_position[Z_AXIS]:= 0
+                    sys_position[A_MOTOR] := sys_position[B_MOTOR] = axis_position
+                else
+                    sys_position[Z_AXIS] := 0
 #else
-                sys_position[idx]:= 0
+                sys_position[idx] := 0
 #endif
             ' Set target direction based on cycle mask and homing cycle approach state.
             ' NOTE: This happens to compile smaller than any other implementation tried.
-                if (bit_istrue(settings.homing_dir_mask,bit(idx))) 
-                    if (approach) 
-                        target[idx]:= -max_travel 
-                    else 
-                        target[idx]:= max_travel 
-                    else 
-                        if (approach) 
-                            target[idx]:= max_travel 
-                        else 
-                            target[idx]:= -max_travel 
+                if (bit_istrue(settings.homing_dir_mask, bit(idx))) 
+                    if (approach)
+                        target[idx] := -max_travel
+                    else
+                        target[idx] := max_travel
+                else
+                    if (approach)
+                        target[idx] := max_travel
+                    else
+                        target[idx] := -max_travel
                 ' Apply axislock to the step port pins active in this cycle.
                 axislock |= step_pin[idx]
 #ifdef ENABLE_DUAL_AXIS
@@ -251,43 +254,44 @@ PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pi
         repeat
             if (approach) 
                 ' Check limit state. Lock out cycle axes when they change.
-                limit_state:= limits_get_state
+                limit_state := limits_get_state
                 repeat idx from 0 to N_AXIS-1
                     if (axislock & step_pin[idx]) 
                         if (limit_state & (1 << idx)) 
 #ifdef COREXY
-                            if (idx==Z_AXIS) 
+                            if (idx == Z_AXIS) 
                                 axislock &= !(step_pin[Z_AXIS]) 
                             else 
                                 axislock &= !(step_pin[A_MOTOR]|step_pin[B_MOTOR]) 
 #else
                             axislock &= !(step_pin[idx])
 #ifdef ENABLE_DUAL_AXIS
-                            if (idx== DUAL_AXIS_SELECT) 
+                            if (idx == DUAL_AXIS_SELECT) 
                                 dual_axis_async_check |= DUAL_AXIS_CHECK_TRIGGER_1 
 #endif
 #endif
-            sys.homing_axis_lock:= axislock
+                sys.homing_axis_lock:= axislock
 #ifdef ENABLE_DUAL_AXIS
-            if (sys.homing_axis_lock_dual) ' NOTE: Only true when homing dual axis.
-                if (limit_state & (1 << N_AXIS)) 
-                    sys.homing_axis_lock_dual:= 0
-                    dual_axis_async_check |= DUAL_AXIS_CHECK_TRIGGER_2
-            ' When first dual axis limit triggers, record position and begin checking distance until other limit triggers. Bail upon failure.
-            if (dual_axis_async_check) 
-                if (dual_axis_async_check & DUAL_AXIS_CHECK_ENABLE) 
-                    if (( dual_axis_async_check & (DUAL_AXIS_CHECK_TRIGGER_1 | DUAL_AXIS_CHECK_TRIGGER_2))== (DUAL_AXIS_CHECK_TRIGGER_1 | DUAL_AXIS_CHECK_TRIGGER_2)) 
-                        dual_axis_async_check:= DUAL_AXIS_CHECK_DISABLE
+                if (sys.homing_axis_lock_dual) ' NOTE: Only true when homing dual axis.
+                    if (limit_state & (1 << N_AXIS)) 
+                        sys.homing_axis_lock_dual:= 0
+                        dual_axis_async_check |= DUAL_AXIS_CHECK_TRIGGER_2
+                ' When first dual axis limit triggers, record position and begin checking distance until other limit triggers. Bail upon failure.
+                if (dual_axis_async_check) 
+                    if (dual_axis_async_check & DUAL_AXIS_CHECK_ENABLE) 
+                        if (( dual_axis_async_check & (DUAL_AXIS_CHECK_TRIGGER_1 | DUAL_AXIS_CHECK_TRIGGER_2))== (DUAL_AXIS_CHECK_TRIGGER_1 | DUAL_AXIS_CHECK_TRIGGER_2)) 
+                            dual_axis_async_check:= DUAL_AXIS_CHECK_DISABLE
+                        else 
+                            if (abs(dual_trigger_position - sys_position[DUAL_AXIS_SELECT]) > dual_fail_distance) 
+                                system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_DUAL_APPROACH)
+                                mc_reset
+                                protocol_execute_realtime
+                                return
                     else 
-                        if (abs(dual_trigger_position - sys_position[DUAL_AXIS_SELECT]) > dual_fail_distance) 
-                            system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_DUAL_APPROACH)
-                            mc_reset
-                            protocol_execute_realtime
-                            return
-                else 
-                    dual_axis_async_check |= DUAL_AXIS_CHECK_ENABLE
-                    dual_trigger_position:= sys_position[DUAL_AXIS_SELECT]
+                        dual_axis_async_check |= DUAL_AXIS_CHECK_ENABLE
+                        dual_trigger_position:= sys_position[DUAL_AXIS_SELECT]
 #endif
+
             st_prep_buffer ' Check and prep segment buffer. NOTE: Should take no longer than 200us.
 
             ' Exit routines: No time to run protocol_execute_realtime in this loop.
@@ -300,10 +304,10 @@ PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pi
                 if (rt_exec & EXEC_SAFETY_DOOR) 
                     system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_DOOR) 
                     ' Homing failure condition: Limit case still engaged after pull-off motion
-                if (!approach && (limits_get_state & cycle_mask)) 
+                if (NOT approach AND (limits_get_state & cycle_mask)) 
                     system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_PULLOFF) 
                     ' Homing failure condition: Limit case not found during approach.
-                if (approach && (rt_exec & EXEC_CYCLE_STOP)) 
+                if (approach AND (rt_exec & EXEC_CYCLE_STOP)) 
                     system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_APPROACH) 
                 if (sys_rt_exec_alarm) 
                     mc_reset ' Stop motors, if they are running.
@@ -314,7 +318,7 @@ PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pi
                     system_clear_exec_state_flag(EXEC_CYCLE_STOP)
 
 #ifdef ENABLE_DUAL_AXIS
-        while ((STEP_MASK & axislock) || (sys.homing_axis_lock_dual))
+        while ((STEP_MASK & axislock) OR (sys.homing_axis_lock_dual))
 #else
         while (STEP_MASK & axislock)
 #endif
@@ -323,15 +327,15 @@ PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pi
         delay_ms(settings.homing_debounce_delay) ' Delay to allow transient dynamics to dissipate.
 
         ' Reverse direction and reset homing rate for locate cycle(s).
-        approach:= !approach
+        approach := NOT approach
 
         ' After first cycle, homing enters locating phase. Shorten search to pull-off distance.
-        if (approach) 
-            max_travel:= settings.homing_pulloff*HOMING_AXIS_LOCATE_SCALAR
-            homing_rate:= settings.homing_feed_rate
-        else 
-            max_travel:= settings.homing_pulloff
-            homing_rate:= settings.homing_seek_rate
+        if (approach)
+            max_travel := settings.homing_pulloff*HOMING_AXIS_LOCATE_SCALAR
+            homing_rate := settings.homing_feed_rate
+        else
+            max_travel := settings.homing_pulloff
+            homing_rate := settings.homing_seek_rate
     while (n_cycle-- > 0)
 
     ' The active cycle axes should now be homed and machine limits have been located. By
@@ -347,26 +351,26 @@ PUB limits_go_home({byte }cycle_mask) | {byte}n_cycle, step_pin[N_AXIS], step_pi
 #ifdef HOMING_FORCE_SET_ORIGIN
             set_axis_position := 0
 #else
-            if ( bit_istrue(settings.homing_dir_mask,bit(idx)) ) 
-                set_axis_position:= lround((settings.max_travel[idx]+settings.homing_pulloff)*settings.steps_per_mm[idx])
-            else 
-                set_axis_position:= lround(-settings.homing_pulloff*settings.steps_per_mm[idx])
+            if (bit_istrue(settings.homing_dir_mask, bit(idx)))
+                set_axis_position := lround((settings.max_travel[idx]+settings.homing_pulloff)*settings.steps_per_mm[idx])
+            else
+                set_axis_position := lround(-settings.homing_pulloff*settings.steps_per_mm[idx])
 #endif
 #ifdef COREXY
-            if (idx==X_AXIS) 
+            if (idx == X_AXIS)
                 off_axis_position := system_convert_corexy_to_y_axis_steps(sys_position)
-                sys_position[A_MOTOR]:= set_axis_position + off_axis_position
-                sys_position[B_MOTOR]:= set_axis_position - off_axis_position
-            elseif (idx==Y_AXIS) 
+                sys_position[A_MOTOR] := set_axis_position + off_axis_position
+                sys_position[B_MOTOR] := set_axis_position - off_axis_position
+            elseif (idx == Y_AXIS)
                 off_axis_position := system_convert_corexy_to_x_axis_steps(sys_position)
-                sys_position[A_MOTOR]:= off_axis_position + set_axis_position
-                sys_position[B_MOTOR]:= off_axis_position - set_axis_position
-            else 
-                sys_position[idx]:= set_axis_position
+                sys_position[A_MOTOR] := off_axis_position + set_axis_position
+                sys_position[B_MOTOR] := off_axis_position - set_axis_position
+            else
+                sys_position[idx] := set_axis_position
 #else
-            sys_position[idx]:= set_axis_position
+            sys_position[idx] := set_axis_position
 #endif
- 
+
     sys.step_control := STEP_CONTROL_NORMAL_OP ' Return step control to normal operation.
 
 ' Performs a soft limit check. Called from mc_line only. Assumes the machine has been homed,
@@ -379,13 +383,13 @@ PUB limits_soft_check({float *}target)
         ' Force feed hold if cycle is active. All buffered blocks are guaranteed to be within
         ' workspace volume so just come to a controlled stop so position is not lost. When complete
         ' enter alarm mode.
-        if (sys.state== STATE_CYCLE) 
+        if (sys.state == STATE_CYCLE)
             system_set_exec_state_flag(EXEC_FEED_HOLD)
             repeat 
                 protocol_execute_realtime
-                if (sys.abort) 
-                    return 
-            while ( sys.state <> STATE_IDLE )
+                if (sys.abort)
+                    return
+            while(sys.state <> STATE_IDLE)
         mc_reset ' Issue system reset and ensure spindle and coolant are shutdown.
         system_set_exec_alarm(EXEC_ALARM_SOFT_LIMIT) ' Indicate soft limit critical event
         protocol_execute_realtime ' Execute to enter critical event loop and system abort

@@ -49,7 +49,7 @@
 #include "coolant_control.h"    '1 2 3 4
 #include "eeprom.h"             '1 2 3 4
 #include "gcode.h"              '1 2 3 4
-#include "limits.h"             '1 2 3
+#include "limits.h"             '1 2 3 4
 #include "motion_control.h"     '1 2 3
 #include "print.h"              '1 2 3
 #include "probe.h"              '1 2 3
