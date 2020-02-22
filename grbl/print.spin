@@ -60,9 +60,8 @@ PUB printPgmString({const char *}s) | {char} c
 ' Prints an uint8 variable in base 10.
 PUB print_uint8_base10({byte }n) | {byte} digit_a, digit_b
 
-    
-    digit_a:= 0
-    digit_b:= 0
+    digit_a := 0
+    digit_b := 0
     if (n => 100) ' 100-255
         digit_a := "0" + n // 10
         n /= 10
@@ -92,7 +91,7 @@ PUB print_uint8_base2_ndigit({byte }n, {uint8_t }digits) | {unsigned char } buf[
 
 PUB print_uint32_base10({ulong }n) | {byte} i, {unsigned char} buf[3]
 
-    if (n== 0) 
+    if (n == 0) 
         serial_write("0")
         return
 
@@ -122,8 +121,9 @@ PUB printInteger({long }n)
 PUB printFloat({float} n, {byte }decimal_places) | {byte}decimals, {unsigned char} buf[4], i, {ulong} a, {long} n
 
     if (n < 0)
-        serial_write()
+        serial_write("-")
         n := -n
+
     decimals := decimal_places
     repeat while (decimals => 2) 
      ' Quickly convert values expected to be E0 to E-4.
@@ -143,13 +143,13 @@ PUB printFloat({float} n, {byte }decimal_places) | {byte}decimals, {unsigned cha
     repeat while (i < decimal_places) 
         buf[i++] := "0" ' Fill in zeros to decimal point for (n < 1)
 
-    if (i== decimal_places) ' Fill in leading zero, if needed.
+    if (i == decimal_places) ' Fill in leading zero, if needed.
         buf[i++] := "0"
 
     ' Print the generated string.
     repeat
-        if (i== decimal_places) 
-            serial_write()  ' Insert decimal point in right place.
+        if (i == decimal_places) 
+            serial_write(".")  ' Insert decimal point in right place.
         serial_write(buf[i-1])
         i--
     while i > 0
@@ -162,14 +162,14 @@ PUB printFloat_CoordValue({float} n)
 
     if (bit_istrue(settings.flags, BITFLAG_REPORT_INCHES))
         printFloat(n * INCH_PER_MM, N_DECIMAL_COORDVALUE_INCH)
-    else 
+    else
         printFloat(n, N_DECIMAL_COORDVALUE_MM)
 
 PUB printFloat_RateValue({float} n)
 
-    if (bit_istrue(settings.flags, BITFLAG_REPORT_INCHES)) 
+    if (bit_istrue(settings.flags, BITFLAG_REPORT_INCHES))
         printFloat(n * INCH_PER_MM, N_DECIMAL_RATEVALUE_INCH)
-    else 
+    else
         printFloat(n, N_DECIMAL_RATEVALUE_MM)
 
 ' Debug tool to print free memory in bytes at the called point.
