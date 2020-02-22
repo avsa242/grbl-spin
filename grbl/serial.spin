@@ -31,32 +31,32 @@ VAR
 
     byte {uint8_t} serial_tx_buffer[TX_RING_BUFFER]
     byte {uint8_t} serial_tx_buffer_head ' := 0
-    byte {volatile uint8_t}  byte serial_tx_buffer_tail ':= 0
+    byte {volatile uint8_t} serial_tx_buffer_tail ':= 0
 
 ' Returns the number of bytes available in the RX serial buffer.
 PUB{uint8_t} serial_get_rx_buffer_available | {uint8_t} rtail
 
     rtail := serial_rx_buffer_tail ' Copy to limit multiple calls to {CHECK_SCOPE} 
     if (serial_rx_buffer_head => rtail)
-        return(RX_BUFFER_SIZE - (serial_rx_buffer_head-rtail)) 
+        return(RX_BUFFER_SIZE - (serial_rx_buffer_head-rtail))
     return((rtail-serial_rx_buffer_head-1))
 
 ' Returns the number of bytes used in the RX serial buffer.
 ' NOTE: Deprecated. Not used unless classic status reports are enabled in config.h.
-PUB{uint8_t} serial_get_rx_buffer_count | {byte} rtail
+PUB{uint8_t} serial_get_rx_buffer_count | {uint8_t} rtail
 
     rtail := serial_rx_buffer_tail ' Copy to limit multiple calls to volatile
     if (serial_rx_buffer_head => rtail)
-        return(serial_rx_buffer_head-rtail) 
+        return(serial_rx_buffer_head-rtail)
     return (RX_BUFFER_SIZE - (rtail-serial_rx_buffer_head))
 
 ' Returns the number of bytes used in the TX serial buffer.
 ' NOTE: Not used except for debugging and ensuring no TX bottlenecks.
-PUB serial_get_tx_buffer_count | {byte} ttail
+PUB serial_get_tx_buffer_count | {uint8_t} ttail
 
-    ttail := serial_tx_buffer_tail ' Copy to limit multiple calls to {CHECK_SCOPE} 
+    ttail := serial_tx_buffer_tail ' Copy to limit multiple calls to volatile
     if (serial_tx_buffer_head => ttail)
-        return(serial_tx_buffer_head-ttail) 
+        return(serial_tx_buffer_head-ttail)
     return (TX_RING_BUFFER - (ttail-serial_tx_buffer_head))
 
 PUB serial_init | {uint16_t} UBRR0_value
@@ -78,62 +78,62 @@ PUB serial_init | {uint16_t} UBRR0_value
     ' defaults to 8-bit, no parity, 1 stop bit
 
 ' Writes one byte to the TX serial buffer. Called by main program.
-PUB serial_write({byte} data) | {byte} next_head
+PUB serial_write({uint8_t} data) | {uint8_t} next_head
 
     ' Calculate next head
-    next_head:= serial_tx_buffer_head + 1
-    if (next_head== TX_RING_BUFFER) 
-        next_head:= 0 
+    next_head := serial_tx_buffer_head + 1
+    if (next_head == TX_RING_BUFFER)
+        next_head := 0
 
     ' Wait until there is space in the buffer
-    repeat while (next_head== serial_tx_buffer_tail) 
+    repeat while (next_head == serial_tx_buffer_tail)
         ' TODO: Restructure st_prep_buffer calls to be executed here during a long print.
-        if (sys_rt_exec_state & EXEC_RESET) 
+        if (sys_rt_exec_state & EXEC_RESET)
             return  ' Only check for abort to a an endless loop.
 
     ' Store data and advance head
-    serial_tx_buffer[serial_tx_buffer_head]:= data
-    serial_tx_buffer_head:= next_head
+    serial_tx_buffer[serial_tx_buffer_head] := data
+    serial_tx_buffer_head := next_head
 
     ' Enable Data Register Empty Interrupt to make sure tx-streaming is running
     UCSR0B |=  (1 << UDRIE0)
 
 ' Data Register Empty Interrupt handler
-ISR(SERIAL_UDRE) | {byte} tail
+ISR(SERIAL_UDRE) | {uint8_t} tail
 
-    byte tail:= serial_tx_buffer_tail ' Temporary serial_tx_buffer_tail (to optimize for {CHECK_SCOPE} )
+    tail := serial_tx_buffer_tail ' Temporary serial_tx_buffer_tail (to optimize for {CHECK_SCOPE} )
 
     ' Send a byte from the buffer
-    UDR0:= serial_tx_buffer[tail]
+    UDR0 := serial_tx_buffer[tail]
 
     ' Update tail position
     tail++
-    if (tail== TX_RING_BUFFER) 
-        tail:= 0
+    if (tail == TX_RING_BUFFER) 
+        tail := 0
 
-    serial_tx_buffer_tail:= tail
+    serial_tx_buffer_tail := tail
 
     ' Turn off Data Register Empty Interrupt to stop tx-streaming if this concludes the transfer
-    if (tail== serial_tx_buffer_head)
+    if (tail == serial_tx_buffer_head)
         UCSR0B &= !(1 << UDRIE0)
 
 ' Fetches the first byte in the serial read buffer. Called by main program.
-PUB serial_read | {byte} tail, data
+PUB serial_read | {uint8_t} tail, data
 
     tail := serial_rx_buffer_tail ' Temporary serial_rx_buffer_tail (to optimize for {CHECK_SCOPE} )
-    if (serial_rx_buffer_head== tail)
+    if (serial_rx_buffer_head == tail)
         return SERIAL_NO_DATA
     else
         data := serial_rx_buffer[tail]
 
     tail++
-    if (tail== RX_RING_BUFFER)
-        tail:= 0
-    serial_rx_buffer_tail:= tail
+    if (tail == RX_RING_BUFFER)
+        tail := 0
+    serial_rx_buffer_tail := tail
 
     return data
 
-ISR(SERIAL_RX) | {byte} data, next_head, sreg
+ISR(SERIAL_RX) | {uint8_t} data, next_head, sreg
 
     data := UDR0 'XXX hardware specific
     ' Pick off realtime command characters directly from the serial stream. These characters are
@@ -154,8 +154,9 @@ ISR(SERIAL_RX) | {byte} data, next_head, sreg
                             system_set_exec_state_flag(EXEC_MOTION_CANCEL) 
 #ifdef DEBUG
             CMD_DEBUG_REPORT: 'XXX hardware specific
-                sreg := SREG cli
-                bit_true(sys_rt_exec_debug,EXEC_DEBUG_REPORT)
+                sreg := SREG
+                cli
+                bit_true(sys_rt_exec_debug, EXEC_DEBUG_REPORT)
                 SREG = sreg
 #endif
                     CMD_FEED_OVR_RESET: system_set_exec_motion_override_flag(EXEC_FEED_OVR_RESET)
@@ -178,14 +179,14 @@ ISR(SERIAL_RX) | {byte} data, next_head, sreg
 #endif
             ' Throw away any unfound extended-ASCII character by not passing it to the serial buffer.
             else ' Write character to buffer
-                next_head:= serial_rx_buffer_head + 1
-                if (next_head== RX_RING_BUFFER)
-                    next_head:= 0
+                next_head := serial_rx_buffer_head + 1
+                if (next_head == RX_RING_BUFFER)
+                    next_head := 0
 
-        ' Write data to buffer unless it is full.
-        if (next_head <> serial_rx_buffer_tail)
-            serial_rx_buffer[serial_rx_buffer_head]:= data
-            serial_rx_buffer_head:= next_head
+                ' Write data to buffer unless it is full.
+                if (next_head <> serial_rx_buffer_tail)
+                    serial_rx_buffer[serial_rx_buffer_head] := data
+                    serial_rx_buffer_head := next_head
 
 PUB serial_reset_read_buffer
 
