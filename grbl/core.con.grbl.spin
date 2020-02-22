@@ -41,7 +41,7 @@
 ' Define the Grbl system include files. NOTE: Do not alter organization.
 #include "config.h"             '1 2 3
 #include "nuts_bolts.h"         '1 2 3 4
-#include "settings.h"           '1 2 3
+#include "settings.h"           '1 2 3 4
 #include "system.h"             '1 2 3
 #include "defaults.h"           '1 2
 #include "cpu_map.h"            '1 2

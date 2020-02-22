@@ -18,7 +18,7 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
 
 PUB system_init
 
@@ -34,7 +34,7 @@ PUB system_init
 ' Returns control pin state as a uint8 bitfield. Each bit indicates the input pin state, where
 ' triggered is 1 and not triggered is 0. Invert mask is applied. Bitfield organization is
 ' defined by the CONTROL_PIN_INDEX in the header file.
-PUB system_control_get_state | control_state, pin
+PUB system_control_get_state | {uint8_t}control_state, pin
 
     control_state := 0
     pin := (CONTROL_PIN & CONTROL_MASK) ^ CONTROL_MASK
@@ -43,10 +43,10 @@ PUB system_control_get_state | control_state, pin
 #endif
     if (pin) 
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-        if (bit_istrue(pin,(1<<CONTROL_SAFETY_DOOR_BIT))) 
+        if (bit_istrue(pin, (1<<CONTROL_SAFETY_DOOR_BIT))) 
             control_state |= CONTROL_PIN_INDEX_SAFETY_DOOR 
 #else
-        if (bit_istrue(pin,(1<<CONTROL_FEED_HOLD_BIT))) 
+        if (bit_istrue(pin, (1<<CONTROL_FEED_HOLD_BIT))) 
             control_state |= CONTROL_PIN_INDEX_FEED_HOLD 
 #endif
         if (bit_istrue(pin, (1<<CONTROL_RESET_BIT))) 
@@ -63,15 +63,15 @@ PUB ISR(CONTROL_INT_vect) | pin       'XXX needs own cog
 
     pin := system_control_get_state
     if (pin) 
-        if (bit_istrue(pin,CONTROL_PIN_INDEX_RESET)) 
+        if (bit_istrue(pin, CONTROL_PIN_INDEX_RESET)) 
             mc_reset
-        if (bit_istrue(pin,CONTROL_PIN_INDEX_CYCLE_START)) 
+        if (bit_istrue(pin, CONTROL_PIN_INDEX_CYCLE_START)) 
             bit_true(sys_rt_exec_state, EXEC_CYCLE_START)
 #ifndef ENABLE_SAFETY_DOOR_INPUT_PIN
-        if (bit_istrue(pin,CONTROL_PIN_INDEX_FEED_HOLD)) 
+        if (bit_istrue(pin, CONTROL_PIN_INDEX_FEED_HOLD)) 
             bit_true(sys_rt_exec_state, EXEC_FEED_HOLD)
 #else
-        if (bit_istrue(pin,CONTROL_PIN_INDEX_SAFETY_DOOR)) 
+        if (bit_istrue(pin, CONTROL_PIN_INDEX_SAFETY_DOOR)) 
             bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR)
 #endif
 
@@ -85,14 +85,14 @@ PUB system_check_safety_door_ajar
 #endif
 
 ' Executes user startup script, if stored.
-PUB system_execute_startup({char *}line) | n, status_code
+PUB system_execute_startup({char *}line) | {uint8_t} n, status_code
 
-    repeat n from 0 to N_STARTUP_LINE-1'for (n=0 n < N_STARTUP_LINE; n++) 
-        if (!(settings_read_startup_line(n, line))) 
+    repeat n from 0 to N_STARTUP_LINE-1
+        if (NOT(settings_read_startup_line(n, line))) 
             line[0] := 0
             report_execute_startup_message(line,STATUS_SETTING_READ_FAIL)
-        else 
-            if (line[0] <> 0) 
+        else
+            if (line[0] <> 0)
                 status_code:= gc_execute_line(line)
                 report_execute_startup_message(line,status_code)
 
@@ -104,25 +104,25 @@ PUB system_execute_startup({char *}line) | n, status_code
 ' the lines that are processed afterward, not necessarily real-time during a cycle,
 ' since there are motions already stored in the buffer. However, this  should not
 ' be an issue, since these commands are not typically used during a cycle.
-PUB system_execute_line({char *}line) | {byte}char_counter, helper_var, {float}parameter, value
+PUB{uint8_t} system_execute_line({char *}line) | {byte}char_counter, helper_var, {float}parameter, value
 
-    char_counter:= 1
-    helper_var:= 0 ' Helper variable
-    case( line[char_counter] ) 
+    char_counter := 1
+    helper_var := 0 ' Helper variable
+    case(line[char_counter])
         0: report_grbl_help
         "J": ' Jogging
             ' Execute only if in IDLE or JOG states.
-            if (sys.state <> STATE_IDLE && sys.state != STATE_JOG) 
+            if (sys.state <> STATE_IDLE AND sys.state <> STATE_JOG) 
                 return(STATUS_IDLE_ERROR) 
-            if(line[2] <> ) 
+            if(line[2] <> "=") 
                 return(STATUS_INVALID_STATEMENT) 
             return(gc_execute_line(line)) ' NOTE: $J= is ignored inside g-code parser and used to detect jog motions.
     "$", "G", "C", "X":
-        if ( line[2] <> 0 ) 
+        if (line[2] <> 0)
             return(STATUS_INVALID_STATEMENT) 
-        case( line[1] ) 
+        case(line[1]) 
             "$": ' Prints Grbl settings
-                if ( sys.state & (STATE_CYCLE | STATE_HOLD) ) 
+                if (sys.state & (STATE_CYCLE | STATE_HOLD))
                     return(STATUS_IDLE_ERROR)  ' Block during cycle. Takes too long to print.
                 else 
                     report_grbl_settings 
@@ -133,7 +133,7 @@ PUB system_execute_line({char *}line) | {byte}char_counter, helper_var, {float}p
                 ' Perform reset when toggling off. Check g-code mode should only work if Grbl
                 ' is idle and ready, regardless of alarm locks. This is mainly to keep things
                 ' simple and consistent.
-                if ( sys.state== STATE_CHECK_MODE ) 
+                if (sys.state == STATE_CHECK_MODE)
                     mc_reset
                     report_feedback_message(MESSAGE_DISABLED)
                 else
@@ -143,7 +143,7 @@ PUB system_execute_line({char *}line) | {byte}char_counter, helper_var, {float}p
                     report_feedback_message(MESSAGE_ENABLED)
             "X": ' Disable alarm lock [ALARM]
                 if (sys.state== STATE_ALARM) 
-                ' Block if safety door is ajar.
+                    ' Block if safety door is ajar.
                     if (system_check_safety_door_ajar) 
                         return(STATUS_CHECK_DOOR) 
                     report_feedback_message(MESSAGE_ALARM_UNLOCK)
@@ -152,113 +152,111 @@ PUB system_execute_line({char *}line) | {byte}char_counter, helper_var, {float}p
                     ' Otherwise, no effect.
     OTHER:
         ' Block any system command that requires the state as IDLE/ALARM. (i.e. EEPROM, homing)
-        if ( !(sys.state== STATE_IDLE || sys.state == STATE_ALARM) ) 
+        if (NOT(sys.state == STATE_IDLE OR sys.state == STATE_ALARM) ) 
             return(STATUS_IDLE_ERROR) 
-        case( line[1] ) 
+        case(line[1])
             "#": ' Print Grbl NGC parameters
-                if ( line[2] <> 0 ) 
-                    return(STATUS_INVALID_STATEMENT) 
-                else 
-                    report_ngc_parameters 
+                if (line[2] <> 0)
+                    return(STATUS_INVALID_STATEMENT)
+                else
+                    report_ngc_parameters
             "H": ' Perform homing cycle [IDLE/ALARM]
-                if (bit_isfalse(settings.flags,BITFLAG_HOMING_ENABLE)) 
-                    return(STATUS_SETTING_DISABLED) 
-                if (system_check_safety_door_ajar) 
+                if (bit_isfalse(settings.flags,BITFLAG_HOMING_ENABLE))
+                    return(STATUS_SETTING_DISABLED)
+                if (system_check_safety_door_ajar)
                     return(STATUS_CHECK_DOOR)  ' Block if safety door is ajar.
                 sys.state:= STATE_HOMING ' Set system state variable
-                if (line[2]== 0) 
+                if (line[2]== 0)
                     mc_homing_cycle(HOMING_CYCLE_ALL)
 #ifdef HOMING_SINGLE_AXIS_COMMANDS
-                else if (line[3]== 0)
+                elseif (line[3]== 0)
                     case (line[2]) 
-                        "X": mc_homing_cycle(HOMING_CYCLE_X) ;
-                        "Y": mc_homing_cycle(HOMING_CYCLE_Y) ;
-                        "Z": mc_homing_cycle(HOMING_CYCLE_Z) ;
+                        "X": mc_homing_cycle(HOMING_CYCLE_X)
+                        "Y": mc_homing_cycle(HOMING_CYCLE_Y)
+                        "Z": mc_homing_cycle(HOMING_CYCLE_Z)
                         OTHER: return(STATUS_INVALID_STATEMENT)
 #endif
-                else 
-                    return(STATUS_INVALID_STATEMENT) 
-                if (!sys.abort) 
+                else
+                    return(STATUS_INVALID_STATEMENT)
+                if (NOT sys.abort) 
                 ' Execute startup scripts after successful homing.
-                    sys.state:= STATE_IDLE ' Set to IDLE when complete.
+                    sys.state := STATE_IDLE ' Set to IDLE when complete.
                     st_go_idle ' Set steppers to the settings idle state before returning.
-                    if (line[2]== 0) 
+                    if (line[2] == 0) 
                         system_execute_startup(line) 
             "S": ' Puts Grbl to sleep [IDLE/ALARM]
-                if ((line[2] <> ) || (line[4] <> 0)) 
+                if ((line[2] <> "L") OR (line[3] <> "P") OR (line[4] <> 0)) 
                     return(STATUS_INVALID_STATEMENT) 
                 system_set_exec_state_flag(EXEC_SLEEP) ' Set to execute sleep mode immediately
             "I": ' Print or store build info. [IDLE/ALARM]
-                if ( line[++char_counter]== 0 ) 
+                if (line[++char_counter] == 0)
                     settings_read_build_info(line)
                     report_build_info(line)
 #ifdef ENABLE_BUILD_INFO_WRITE_COMMAND
-                else 
+                else
                 ' Store startup line [IDLE/ALARM]
-                    if(line[char_counter++] <> ) 
-                        return(STATUS_INVALID_STATEMENT) 
-                    helper_var:= char_counter ' Set helper variable as counter to start of user info line.
+                    if(line[char_counter++] <> "=")
+                        return(STATUS_INVALID_STATEMENT)
+                    helper_var := char_counter ' Set helper variable as counter to start of user info line.
                     repeat
-                        line[char_counter-helper_var]:= line[char_counter]
+                        line[char_counter-helper_var] := line[char_counter]
                     while (line[char_counter++] <> 0)
                     settings_store_build_info(line)
 #endif
             "R": ' Restore defaults [IDLE/ALARM]
-                if ((line[2] <> ) || (line[6] != 0)) 
+                if ((line[2] <> "S") OR (line[3] <> "T") OR (line[4] <> "=") OR (line[6] <> 0)) 
                     return(STATUS_INVALID_STATEMENT) 
-                case (line[5]) 
+                case (line[5])
 #ifdef ENABLE_RESTORE_EEPROM_DEFAULT_SETTINGS
-                    "$": settings_restore(SETTINGS_RESTORE_DEFAULTS) ;
+                    "$": settings_restore(SETTINGS_RESTORE_DEFAULTS)
 #endif
 #ifdef ENABLE_RESTORE_EEPROM_CLEAR_PARAMETERS
-                    "#": settings_restore(SETTINGS_RESTORE_PARAMETERS) ;
+                    "#": settings_restore(SETTINGS_RESTORE_PARAMETERS)
 #endif
 #ifdef ENABLE_RESTORE_EEPROM_WIPE_ALL
-                    "*": settings_restore(SETTINGS_RESTORE_ALL) ;
+                    "*": settings_restore(SETTINGS_RESTORE_ALL)
 #endif
                     OTHER: return(STATUS_INVALID_STATEMENT)
                 report_feedback_message(MESSAGE_RESTORE_DEFAULTS)
                 mc_reset ' Force reset to ensure settings are initialized correctly.
             "N": ' Startup lines. [IDLE/ALARM]
-                if ( line[++char_counter]== 0 ) 
-                ' Print startup lines
-                    repeat helper_var from 0 to N_STARTUP_LINE-1 
-                        if (!(settings_read_startup_line(helper_var, line))) 
+                if (line[++char_counter] == 0)  ' Print startup lines
+                    repeat helper_var from 0 to N_STARTUP_LINE-1
+                        if (NOT(settings_read_startup_line(helper_var, line)))
                             report_status_message(STATUS_SETTING_READ_FAIL)
-                        else 
+                        else
                             report_startup_line(helper_var,line)
-                else 
-                ' Store startup line [IDLE Only] Prevents motion during ALARM.
+                else ' Store startup line [IDLE Only] Prevents motion during ALARM.
                     if (sys.state <> STATE_IDLE) 
                         return(STATUS_IDLE_ERROR)  ' Store only when idle.
-                    helper_var:= true  ' Set helper_var to flag storing method.
+                    helper_var := true  ' Set helper_var to flag storing method.
                     ' No . Continues into OTHER: to read remaining command characters.
             OTHER:  ' Storing setting methods [IDLE/ALARM]
-                if(!read_float(line, &char_counter, &parameter)) 
-                    return(STATUS_BAD_NUMBER_FORMAT) 
-                if(line[char_counter++] <> ) 
-                    return(STATUS_INVALID_STATEMENT) 
-                if (helper_var) 
+                if(NOT read_float(line, @char_counter, @parameter))
+                    return(STATUS_BAD_NUMBER_FORMAT)
+                if(line[char_counter++] <> "=")
+                    return(STATUS_INVALID_STATEMENT)
+                if (helper_var)
                 ' Store startup line
                 ' Prepare sending gcode block to gcode parser by shifting all characters
-                    helper_var:= char_counter ' Set helper variable as counter to start of gcode block
+                    helper_var := char_counter ' Set helper variable as counter to start of gcode block
                     repeat
-                        line[char_counter-helper_var]:= line[char_counter]
+                        line[char_counter-helper_var] := line[char_counter]
                     while (line[char_counter++] <> 0)
                     ' Execute gcode block to ensure block is valid.
-                    helper_var:= gc_execute_line(line) ' Set helper_var to returned status code.
+                    helper_var := gc_execute_line(line) ' Set helper_var to returned status code.
                     if (helper_var) 
                         return(helper_var) 
                     else 
-                        helper_var:= trunc(parameter) ' Set helper_var to int value of parameter
-                        settings_store_startup_line(helper_var,line)
-                else 
+                        helper_var := {trunc(}parameter ' Set helper_var to int value of parameter
+                        settings_store_startup_line(helper_var, line)
+                else
                 ' Store global setting.
-                    if(!read_float(line, &char_counter, &value)) 
+                    if(NOT read_float(line, @char_counter, @value)) 
                         return(STATUS_BAD_NUMBER_FORMAT) 
-                    if((line[char_counter] <> 0) || (parameter > 255)) 
+                    if((line[char_counter] <> 0) OR (parameter > 255)) 
                         return(STATUS_INVALID_STATEMENT) 
-                    return(settings_store_global_setting((byte)parameter, value))
+                    return(settings_store_global_setting({uint8_t}parameter, value))
     return(STATUS_OK) ' If '$' command makes it to here, then everything's ok.
 
 PUB system_flag_wco_change
@@ -266,26 +264,26 @@ PUB system_flag_wco_change
 #ifdef FORCE_BUFFER_SYNC_DURING_WCO_CHANGE
     protocol_buffer_synchronize
 #endif
-    sys.report_wco_counter:= 0
+    sys.report_wco_counter := 0
 
 ' Returns machine position of axis  array.
 ' NOTE: If motor steps and machine position are not in the same coordinate frame, this function
 '   serves as a central place to compute the transformation.
-PUB{float} system_convert_axis_steps_to_mpos({long *}steps, {byte} idx) | pos
+PUB{float} system_convert_axis_steps_to_mpos({long *}steps, {uint8_t} idx) | {float}pos
 
 #ifdef COREXY
     if (idx==X_AXIS) 
-        pos:= (float)system_convert_corexy_to_x_axis_steps(steps) / settings.steps_per_mm[idx]
+        pos := {(float)}system_convert_corexy_to_x_axis_steps(steps) / settings.steps_per_mm[idx]
     elseif (idx==Y_AXIS) 
-        pos:= (float)system_convert_corexy_to_y_axis_steps(steps) / settings.steps_per_mm[idx]
-    else 
-        pos:= steps[idx]/settings.steps_per_mm[idx]
+        pos := {(float)}system_convert_corexy_to_y_axis_steps(steps) / settings.steps_per_mm[idx]
+    else
+        pos := steps[idx]/settings.steps_per_mm[idx]
 #else
-    pos:= steps[idx]/settings.steps_per_mm[idx]
+    pos := steps[idx]/settings.steps_per_mm[idx]
 #endif
     return(pos)
 
-PUB system_convert_array_steps_to_mpos({float *}position, {long *}steps) | idx
+PUB system_convert_array_steps_to_mpos({float *}position, {int32_t *}steps) | {uint8_t}idx
 
     repeat idx from 0 to N_AXIS-1
         position[idx] := system_convert_axis_steps_to_mpos(steps, idx)
@@ -293,88 +291,88 @@ PUB system_convert_array_steps_to_mpos({float *}position, {long *}steps) | idx
 
 ' CoreXY calculation only. Returns x or y-axis "steps" based on CoreXY motor steps.
 #ifdef COREXY
-PUB{long} system_convert_corexy_to_x_axis_steps({int32_t *}steps)
+PUB{int32_t} system_convert_corexy_to_x_axis_steps({int32_t *}steps)
 
     return( (steps[A_MOTOR] + steps[B_MOTOR])/2 )
   
-PUB{long} system_convert_corexy_to_y_axis_steps({int32_t *}steps)
+PUB{int32_t} system_convert_corexy_to_y_axis_steps({int32_t *}steps)
 
     return( (steps[A_MOTOR] - steps[B_MOTOR])/2 )
 #endif
 
 ' Checks and reports if target array exceeds machine travel limits.
-PUB system_check_travel_limits({float *}target) | idx
+PUB system_check_travel_limits({float *}target) | {uint8_t}idx
 
     repeat idx from 0 to N_AXIS-1
 #ifdef HOMING_FORCE_SET_ORIGIN
     ' When homing forced set origin is enabled, soft limits checks need to account for directionality.
     ' NOTE: max_travel is stored as negative
         if (bit_istrue(settings.homing_dir_mask,bit(idx))) 
-            if (target[idx] < 0 || target[idx] > -settings.max_travel[idx]) 
+            if (target[idx] < 0 OR target[idx] > -settings.max_travel[idx]) 
                 return(true) 
         else 
-            if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) 
+            if (target[idx] > 0 OR target[idx] < settings.max_travel[idx]) 
                 return(true) 
 #else
     ' NOTE: max_travel is stored as negative
-        if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) 
+        if (target[idx] > 0 OR target[idx] < settings.max_travel[idx]) 
             return(true) 
 #endif
     return(false)
 
 ' Special handlers for setting and clearing Grbl's real-time execution flags.
-PUB system_set_exec_state_flag({byte} mask) | sreg
+PUB system_set_exec_state_flag({uint8_t} mask) | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_state |= (mask)
 '    SREG := sreg
 
-PUB system_clear_exec_state_flag({byte} mask) | sreg
+PUB system_clear_exec_state_flag({uint8_t} mask) | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_state &= !(mask)
 '    SREG:= sreg
 
-PUB system_set_exec_alarm({byte} code) | sreg
+PUB system_set_exec_alarm({uint8_t} code) | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_alarm:= code
 '    SREG:= sreg
 
 PUB system_clear_exec_alarm | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_alarm:= 0
 '    SREG:= sreg
 
-PUB system_set_exec_motion_override_flag({byte} mask) | sreg
+PUB system_set_exec_motion_override_flag({uint8_t} mask) | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_motion_override |= (mask)
 '    SREG:= sreg
 
-PUB system_set_exec_accessory_override_flag({byte} mask) | sreg
+PUB system_set_exec_accessory_override_flag({uint8_t} mask) | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_accessory_override |= (mask)
 '    SREG:= sreg
 
 PUB system_clear_exec_motion_overrides | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_motion_override:= 0
 '    SREG:= sreg
 
 PUB system_clear_exec_accessory_overrides | sreg
 
-'    byte sreg:= SREG
+'    uint8_t sreg:= SREG
     cli
     sys_rt_exec_accessory_override:= 0
 '    SREG:= sreg
