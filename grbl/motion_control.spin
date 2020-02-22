@@ -33,13 +33,13 @@ PUB mc_line({float *}target, {plan_line_data_t *}pl_data)
 
     ' If enabled, check for soft limit violations. Placed here all line motions are picked up
     ' from everywhere in Grbl.
-    if (bit_istrue(settings.flags,BITFLAG_SOFT_LIMIT_ENABLE)) 
+    if (bit_istrue(settings.flags, BITFLAG_SOFT_LIMIT_ENABLE)) 
     ' NOTE: Block jog state. Jogging is a special and soft limits are handled independently.
         if (sys.state <> STATE_JOG)
             limits_soft_check(target)
     ' If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
-    if (sys.state== STATE_CHECK_MODE) 
-        return 
+    if (sys.state == STATE_CHECK_MODE) 
+        return
 
   ' NOTE: Backlash compensation may be installed here. It will need direction info to track when
   ' to insert a backlash line motion(s) before the intended line motion and will require its own
@@ -61,17 +61,16 @@ PUB mc_line({float *}target, {plan_line_data_t *}pl_data)
         protocol_execute_realtime ' Check for any run-time commands
         if (sys.abort) 
             return  ' Bail, if system abort.
-        if ( plan_check_full_buffer ) 
+        if (plan_check_full_buffer ) 
             protocol_auto_cycle_start  ' Auto-cycle start when buffer is full.
         else 
             quit
-    'while 1
 
     ' Plan and queue motion into planner buffer
-    if (plan_buffer_line(target, pl_data)== PLAN_EMPTY_BLOCK) 
-        if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) 
-        ' Correctly set spindle state, if there is a coincident position passed. Forces a buffer
-        ' sync repeat while in M3 laser mode only.
+    if (plan_buffer_line(target, pl_data) == PLAN_EMPTY_BLOCK) 
+        if (bit_istrue(settings.flags, BITFLAG_LASER_MODE)) 
+            ' Correctly set spindle state, if there is a coincident position passed. Forces a buffer
+            ' sync repeat while in M3 laser mode only.
             if (pl_data->condition & PL_COND_FLAG_SPINDLE_CW) 
                 spindle_sync(PL_COND_FLAG_SPINDLE_CW, pl_data->spindle_speed)
 
@@ -83,17 +82,17 @@ PUB mc_line({float *}target, {plan_line_data_t *}pl_data)
 ' of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 ' distance from segment to the circle when the end points both lie on the circle.
 PUB mc_arc({float *}target, {plan_line_data_t *}pl_data, {float *}position, {float *}offset, {float }radius,
-  {byte }axis_0, {uint8_t }axis_1, {uint8_t }axis_linear, {uint8_t }is_clockwise_arc) | {float}center_axis0, center_axis1, r_axis0, r_axis1, rt_axis0, rt_axis1, angular_travel, {uint16_t}segments, {float}theta_per_segment, linear_per_segment, cos_T, sin_T, cos_Ti, sin_Ti, r_axisi, {uint16_t}i, {byte}count
+  {byte }axis_0, {uint8_t }axis_1, {uint8_t }axis_linear, {uint8_t }is_clockwise_arc) | {float}center_axis0, center_axis1, r_axis0, r_axis1, rt_axis0, rt_axis1, angular_travel, {uint16_t}segments, {float}theta_per_segment, linear_per_segment, cos_T, sin_T, cos_Ti, sin_Ti, r_axisi, {uint16_t}i, {uint8_t}count
 
-    center_axis0:= position[axis_0] + offset[axis_0]
-    center_axis1:= position[axis_1] + offset[axis_1]
-    r_axis0:= -offset[axis_0]  ' Radius vector from center to current location
-    r_axis1:= -offset[axis_1]
-    rt_axis0:= target[axis_0] - center_axis0
-    rt_axis1:= target[axis_1] - center_axis1
+    center_axis0 := position[axis_0] + offset[axis_0]
+    center_axis1 := position[axis_1] + offset[axis_1]
+    r_axis0 := -offset[axis_0]  ' Radius vector from center to current location
+    r_axis1 := -offset[axis_1]
+    rt_axis0 := target[axis_0] - center_axis0
+    rt_axis1 := target[axis_1] - center_axis1
 
     ' CCW angle between position and target from circle center. Only one atan2 trig computation required.
-    angular_travel:= atan2(r_axis0*rt_axis1-r_axis1*rt_axis0, r_axis0*rt_axis0+r_axis1*rt_axis1)
+    angular_travel := atan2(r_axis0*rt_axis1-r_axis1*rt_axis0, r_axis0*rt_axis0+r_axis1*rt_axis1)
     if (is_clockwise_arc) 
         ' Correct atan2 output per direction
         if (angular_travel => -ARC_ANGULAR_TRAVEL_EPSILON) 
@@ -106,13 +105,13 @@ PUB mc_arc({float *}target, {plan_line_data_t *}pl_data, {float *}position, {flo
     ' (2x) settings.arc_tolerance. For 99% of users, this is just fine. If a different arc segment fit
     ' is desired, i.e. least-squares, midpoint on arc, just change the mm_per_arc_segment calculation.
     ' For the intended uses of Grbl, this value shouldn't exceed 2000 for the strictest of cases.
-    segments:= floor(fabs(0.5*angular_travel*radius) / sqrt(settings.arc_tolerance*(2*radius - settings.arc_tolerance)) )
+    segments := floor(fabs(0.5*angular_travel*radius) / sqrt(settings.arc_tolerance*(2*radius - settings.arc_tolerance)) )
 
     if (segments)
         ' Multiply inverse feed_rate to compensate for the fact that this movement is approximated
         ' by a number of discrete segments. The inverse feed_rate should be correct for the sum of
         ' all segments.
-        if (pl_data->condition & PL_COND_FLAG_INVERSE_TIME) 
+        if (pl_data->condition & PL_COND_FLAG_INVERSE_TIME)
             pl_data->feed_rate *= segments 
             bit_false(pl_data->condition,PL_COND_FLAG_INVERSE_TIME) ' Force as feed absolute mode over arc segments.
         theta_per_segment := angular_travel/segments
@@ -153,21 +152,21 @@ PUB mc_arc({float *}target, {plan_line_data_t *}pl_data, {float *}position, {flo
         repeat i from 1 to segments-1   ' Increment (segments-1).
             if (count < N_ARC_CORRECTION)
                 ' Apply vector rotation matrix. !40 usec
-                r_axisi:= r_axis0*sin_T + r_axis1*cos_T
-                r_axis0:= r_axis0*cos_T - r_axis1*sin_T
-                r_axis1:= r_axisi
+                r_axisi := r_axis0*sin_T + r_axis1*cos_T
+                r_axis0 := r_axis0*cos_T - r_axis1*sin_T
+                r_axis1 := r_axisi
                 count++
             else 
                 ' Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments. !375 usec
                 ' Compute exact location by applying transformation matrix from initial radius vector(=-offset).
-                cos_Ti:= cos(i*theta_per_segment)
-                sin_Ti:= sin(i*theta_per_segment)
-                r_axis0:= -offset[axis_0]*cos_Ti + offset[axis_1]*sin_Ti
-                r_axis1:= -offset[axis_0]*sin_Ti - offset[axis_1]*cos_Ti
-                count:= 0
+                cos_Ti := cos(i*theta_per_segment)
+                sin_Ti := sin(i*theta_per_segment)
+                r_axis0 := -offset[axis_0]*cos_Ti + offset[axis_1]*sin_Ti
+                r_axis1 := -offset[axis_0]*sin_Ti - offset[axis_1]*cos_Ti
+                count := 0
             ' Update arc_target location
-            position[axis_0]:= center_axis0 + r_axis0
-            position[axis_1]:= center_axis1 + r_axis1
+            position[axis_0] := center_axis0 + r_axis0
+            position[axis_1] := center_axis1 + r_axis1
             position[axis_linear] += linear_per_segment
 
             mc_line(position, pl_data)
@@ -181,15 +180,15 @@ PUB mc_arc({float *}target, {plan_line_data_t *}pl_data, {float *}position, {flo
 ' Execute dwell in seconds.
 PUB mc_dwell({float} seconds)
 
-    if (sys.state== STATE_CHECK_MODE) 
-        return 
+    if (sys.state == STATE_CHECK_MODE)
+        return
     protocol_buffer_synchronize
     delay_sec(seconds, DELAY_MODE_DWELL)
 
 ' Perform homing cycle to locate and set machine zero. Only  executes this command.
 ' NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
 ' executing the homing cycle. This prevents incorrect buffered plans after homing.
-PUB mc_homing_cycle({byte} cycle_mask)
+PUB mc_homing_cycle({uint8_t} cycle_mask)
 
   ' Check and abort homing cycle, if hard limits are already enabled. Helps prevent problems
   ' with machines with limits wired on both ends of travel to one limit pin.
@@ -236,15 +235,15 @@ PUB mc_homing_cycle({byte} cycle_mask)
 
 ' Perform tool length probe cycle. Requires probe case.
 ' NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
-PUB mc_probe_cycle({float *}target, {plan_line_data_t *}pl_data, {byte }parser_flags) | {byte}is_probe_away, is_no_error, plan_status
+PUB{uint8_t} mc_probe_cycle({float *}target, {plan_line_data_t *}pl_data, {byte }parser_flags) | {uint8_t}is_probe_away, is_no_error, plan_status
 
     ' TODO: Need to update this cycle so it obeys a non-auto cycle start.
-    if (sys.state== STATE_CHECK_MODE) 
-        return(GC_PROBE_CHECK_MODE) 
+    if (sys.state == STATE_CHECK_MODE)
+        return(GC_PROBE_CHECK_MODE)
 
     ' Finish all queued commands and empty planner buffer before starting probe cycle.
     protocol_buffer_synchronize
-    if (sys.abort) 
+    if (sys.abort)
         return(GC_PROBE_ABORT)  ' Return if system reset has been issued.
 
     ' Initialize probing control variables
@@ -255,7 +254,7 @@ PUB mc_probe_cycle({float *}target, {plan_line_data_t *}pl_data, {byte }parser_f
 
     ' After syncing, check if probe is already triggered. If so, halt and issue alarm.
     ' NOTE: This probe initialization error applies to all probing cycles.
-    if ( probe_get_state ) 
+    if (probe_get_state)
         ' Check probe pin state.
         system_set_exec_alarm(EXEC_ALARM_PROBE_FAIL_INITIAL)
         protocol_execute_realtime
@@ -279,14 +278,14 @@ PUB mc_probe_cycle({float *}target, {plan_line_data_t *}pl_data, {byte }parser_f
     ' Probing cycle complete!
 
     ' Set state variables and error out, if the probe failed and cycle with error is enabled.
-    if (sys_probe_state== PROBE_ACTIVE) 
-        if (is_no_error) 
+    if (sys_probe_state == PROBE_ACTIVE)
+        if (is_no_error)
             bytemove(sys_probe_position, sys_position, {sizeof}sys_position) 
-    else
-        system_set_exec_alarm(EXEC_ALARM_PROBE_FAIL_CONTACT) 
+        else
+            system_set_exec_alarm(EXEC_ALARM_PROBE_FAIL_CONTACT) 
     else
         sys.probe_succeeded := true ' Indicate to system the probing cycle completed successfully.
-    sys_probe_state:= PROBE_OFF ' Ensure probe state monitor is disabled.
+    sys_probe_state := PROBE_OFF ' Ensure probe state monitor is disabled.
     probe_configure_invert_mask(false) ' Re-initialize invert mask.
     protocol_execute_realtime   ' Check and execute run-time commands
 
@@ -308,19 +307,19 @@ PUB mc_probe_cycle({float *}target, {plan_line_data_t *}pl_data, {byte }parser_f
 ' Plans and executes the single special motion for parking. Independent of main planner buffer.
 ' NOTE: Uses the always free planner ring buffer head to store motion parameters for execution.
 #ifdef PARKING_ENABLE
-PUB mc_parking_motion({float *}parking_target, {plan_line_data_t *}pl_data) | {byte}plan_status, override_state
+PUB mc_parking_motion({float *}parking_target, {plan_line_data_t *}pl_data) | {uint8_t}plan_status, override_state
 
     if (sys.abort) 
         return  ' Block during abort.
-    plan_status:= plan_buffer_line(parking_target, pl_data)
+    plan_status := plan_buffer_line(parking_target, pl_data)
 
-    if (plan_status) 
+    if (plan_status)
         bit_true(sys.step_control, STEP_CONTROL_EXECUTE_SYS_MOTION)
         bit_false(sys.step_control, STEP_CONTROL_END_MOTION) ' Allow parking motion to execute, if feed hold is active.
         st_parking_setup_buffer ' Setup step segment buffer for special parking motion case
         st_prep_buffer
         st_wake_up
-        repeat 
+        repeat
             protocol_exec_rt_system
             if (sys.abort) 
                 return 
@@ -360,9 +359,9 @@ PUB mc_reset
     ' NOTE: If steppers are kept enabled via the step idle delay setting, this also keeps
     ' the steppers enabled by aing the go_idle call altogether, unless the motion state is
     ' violated, by which, all bets are off.
-    if ((sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG)) OR (sys.step_control & (STEP_CONTROL_EXECUTE_HOLD | STEP_CONTROL_EXECUTE_SYS_MOTION))) 
+    if ((sys.state & (STATE_CYCLE | STATE_HOMING | STATE_JOG)) OR (sys.step_control & (STEP_CONTROL_EXECUTE_HOLD | STEP_CONTROL_EXECUTE_SYS_MOTION)))
         if (sys.state == STATE_HOMING)
-            if (!sys_rt_exec_alarm)
+            if (NOT sys_rt_exec_alarm)
                 system_set_exec_alarm(EXEC_ALARM_HOMING_FAIL_RESET)
             else 
                 system_set_exec_alarm(EXEC_ALARM_ABORT_CYCLE) 
