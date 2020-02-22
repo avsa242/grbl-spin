@@ -51,7 +51,7 @@ PUB {static} report_util_gcode_modes_M
 ' static  report_util_comment_line_feed 
 '     serial_write() report_util_line_feed; 
 
-PUB {static} report_util_axis_values({float *}axis_value) | {byte} idx
+PUB {static} report_util_axis_values({float *}axis_value) | {uint8_t} idx
 
     repeat idx from 0 to N_AXIS-1 
         printFloat_CoordValue(axis_value[idx])
@@ -109,13 +109,13 @@ static  report_util_setting_string(byte n)
 
 }}
 
-PUB {static} report_util_uint8_setting({byte} n, {int} val) 
+PUB {static} report_util_uint8_setting({uint8_t} n, {int} val) 
 
     report_util_setting_prefix(n) 
     print_uint8_base10(val) 
     report_util_line_feed ' report_util_setting_string(n); 
 
-PUB {static} report_util_float_setting({byte} n, {float} val, {uint8_t} n_decimal) 
+PUB {static} report_util_float_setting({uint8_t} n, {float} val, {uint8_t} n_decimal) 
 
     report_util_setting_prefix(n) 
     printFloat(val, n_decimal)
@@ -127,7 +127,7 @@ PUB {static} report_util_float_setting({byte} n, {float} val, {uint8_t} n_decima
 ' operation. Errors events can originate from the g-code parser, settings module, or asynchronously
 ' from a critical error, such as a triggered hard limit. Interface should always monitor for these
 ' responses.
-PUB report_status_message({byte} status_code)
+PUB report_status_message({uint8_t} status_code)
 
     case(status_code) 
         STATUS_OK: ' STATUS_OK
@@ -138,7 +138,7 @@ PUB report_status_message({byte} status_code)
             report_util_line_feed
 
 ' Prints alarm messages.
-PUB report_alarm_message({byte} alarm_code)
+PUB report_alarm_message({uint8_t} alarm_code)
 
     printPgmString(PSTR("ALARM:"))
     print_uint8_base10(alarm_code)
@@ -150,7 +150,7 @@ PUB report_alarm_message({byte} alarm_code)
 ' messages such as setup warnings, case toggling, and how to exit alarms.
 ' NOTE: For interfaces, messages are always placed within brackets. And if silent mode
 ' is installed, the message number codes are less than zero.
-PUB report_feedback_message({byte} message_code)
+PUB report_feedback_message({uint8_t} message_code)
 
     printPgmString(PSTR("[MSG:"))   'string("[MSG:")?
     case(message_code) 
@@ -191,7 +191,7 @@ PUB report_grbl_help
 
 ' Grbl global settings print out.
 ' NOTE: The numbering scheme here must correlate to storing in settings.c
-PUB report_grbl_settings | {byte} idx, set_idx, val
+PUB report_grbl_settings | {uint8_t} idx, set_idx, val
 
     ' Print Grbl settings.
     report_util_uint8_setting(0,settings.pulse_microseconds)
@@ -245,10 +245,10 @@ PUB report_probe_parameters | {float} print_position[N_AXIS]
     report_util_feedback_line_feed
 
 ' Prints Grbl NGC parameters (coordinate offsets, probing)
-PUB report_ngc_parameters | {float} coord_data[N_AXIS], {byte} coord_select
+PUB report_ngc_parameters | {float} coord_data[N_AXIS], {uint8_t} coord_select
 
     repeat coord_select from 0 to SETTING_INDEX_NCOORD
-        if (!(settings_read_coord_data(coord_select,coord_data))) 
+        if (NOT(settings_read_coord_data(coord_select,coord_data))) 
             report_status_message(STATUS_SETTING_READ_FAIL)
             return
         printPgmString(PSTR("[G"))
@@ -347,7 +347,7 @@ PUB report_gcode_modes
     report_util_feedback_line_feed
 
 ' Prints specified startup line
-PUB report_startup_line({byte} n, {char *}line)
+PUB report_startup_line({uint8_t} n, {char *}line)
 
     printPgmString(PSTR("$N"))
     print_uint8_base10(n)
@@ -355,7 +355,7 @@ PUB report_startup_line({byte} n, {char *}line)
     printString(line)
     report_util_line_feed
 
-PUB report_execute_startup_message({char *}line, {byte} status_code)
+PUB report_execute_startup_message({char *}line, {uint8_t} status_code)
 
     serial_write(">")
     printString(line)
@@ -456,9 +456,9 @@ PUB report_echo_line_received({char *}line)
  ' specific needs, but the desired real-time data report must be as short as possible. This is
  ' requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
  ' especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
-PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}print_position, {float}wco[N_AXIS], {uint32_t} ln, {uint8_t} lim_pin_state, ctrl_pin_state, prb_pin_state, sp_state, cl_state
+PUB report_realtime_status | {uint8_t}idx, {int32_t}current_position[N_AXIS], {float}print_position, {float}wco[N_AXIS], {uint32_t} ln, {uint8_t} lim_pin_state, ctrl_pin_state, prb_pin_state, sp_state, cl_state
 
-    'long current_position[N_AXIS] ' Copy current state of the system position variable
+    'int32_t current_position[N_AXIS] ' Copy current state of the system position variable
     bytemove(current_position, sys_position, {sizeof}sys_position)
     system_convert_array_steps_to_mpos(print_position, current_position)
 
@@ -468,7 +468,7 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
         STATE_IDLE: printPgmString(PSTR("Idle"))
         STATE_CYCLE: printPgmString(PSTR("Run"))
         STATE_HOLD:
-            if (!(sys.suspend & SUSPEND_JOG_CANCEL))
+            if (NOT(sys.suspend & SUSPEND_JOG_CANCEL))
                 printPgmString(PSTR("Hold:"))
                 if (sys.suspend & SUSPEND_HOLD_COMPLETE) 
                     serial_write("0")  ' Ready to resume
@@ -494,17 +494,17 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
                     serial_write("2") ' Retracting
         STATE_SLEEP: printPgmString(PSTR("Sleep"))
 
-    if (bit_isfalse(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE) OR (sys.report_wco_counter== 0) )
+    if (bit_isfalse(settings.status_report_mask, BITFLAG_RT_STATUS_POSITION_TYPE) OR (sys.report_wco_counter == 0))
         repeat idx from 0 to N_AXIS-1
             ' Apply work coordinate offsets and tool length offset to current position.
             wco[idx] := gc_state.coord_system[idx]+gc_state.coord_offset[idx]
-            if (idx== TOOL_LENGTH_OFFSET_AXIS)
+            if (idx == TOOL_LENGTH_OFFSET_AXIS)
                 wco[idx] += gc_state.tool_length_offset 
             if (bit_isfalse(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE))
                 print_position[idx] -= wco[idx]
 
     ' Report machine position
-    if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_POSITION_TYPE))
+    if (bit_istrue(settings.status_report_mask, BITFLAG_RT_STATUS_POSITION_TYPE))
         printPgmString(PSTR("|MPos:"))
     else
         printPgmString(PSTR("|WPos:"))
@@ -512,7 +512,7 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
 
     ' Returns planner and serial read buffer states.
 #ifdef REPORT_FIELD_BUFFER_STATE
-    if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_BUFFER_STATE))
+    if (bit_istrue(settings.status_report_mask, BITFLAG_RT_STATUS_BUFFER_STATE))
         printPgmString(PSTR("|Bf:"))
         print_uint8_base10(plan_get_block_buffer_available)
         serial_write(",")
@@ -522,10 +522,10 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
 #ifdef USE_LINE_NUMBERS
 #ifdef REPORT_FIELD_LINE_NUMBERS
     ' Report current line number
-    plan_block_t * cur_block:= plan_get_current_block
-    if (cur_block <> NULL) 
+    {plan_block_t *} cur_block := plan_get_current_block
+    if (cur_block <> NULL)
         ln := cur_block->line_number
-        if (ln > 0) 
+        if (ln > 0)
             printPgmString(PSTR("|Ln:"))
             printInteger(ln)
 #endif
@@ -537,7 +537,7 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
     printPgmString(PSTR("|FS:"))
     printFloat_RateValue(st_get_realtime_rate)
     serial_write(",")
-    printFloat(sys.spindle_speed,N_DECIMAL_RPMVALUE)
+    printFloat(sys.spindle_speed, N_DECIMAL_RPMVALUE)
 #else
     printPgmString(PSTR("|F:"))
     printFloat_RateValue(st_get_realtime_rate)
@@ -550,35 +550,35 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
     prb_pin_state := probe_get_state
     if (lim_pin_state | ctrl_pin_state | prb_pin_state)
         printPgmString(PSTR("|Pn:"))
-        if (prb_pin_state) 
-            serial_write() 
+        if (prb_pin_state)
+            serial_write("P") 
         if (lim_pin_state) 
 #ifdef ENABLE_DUAL_AXIS
-#if (DUAL_AXIS_SELECT== X_AXIS)
-            if (bit_istrue(lim_pin_state,(bit(X_AXIS)|bit(N_AXIS)))) 
+#if (DUAL_AXIS_SELECT == X_AXIS)
+            if (bit_istrue(lim_pin_state, (bit(X_AXIS)|bit(N_AXIS)))) 
                 serial_write("X")
-            if (bit_istrue(lim_pin_state,bit(Y_AXIS))) 
+            if (bit_istrue(lim_pin_state, bit(Y_AXIS))) 
                 serial_write("Y")
 #endif
 #if (DUAL_AXIS_SELECT== Y_AXIS)
-            if (bit_istrue(lim_pin_state,bit(X_AXIS)))
+            if (bit_istrue(lim_pin_state, bit(X_AXIS)))
                 serial_write("X")
-            if (bit_istrue(lim_pin_state,(bit(Y_AXIS)|bit(N_AXIS))))
+            if (bit_istrue(lim_pin_state, (bit(Y_AXIS)|bit(N_AXIS))))
                 serial_write("Y")
 #endif
-            if (bit_istrue(lim_pin_state,bit(Z_AXIS)))
+            if (bit_istrue(lim_pin_state, bit(Z_AXIS)))
                 serial_write("Z")
 #else
-            if (bit_istrue(lim_pin_state,bit(X_AXIS)))
+            if (bit_istrue(lim_pin_state, bit(X_AXIS)))
                 serial_write("X")
-            if (bit_istrue(lim_pin_state,bit(Y_AXIS)))
+            if (bit_istrue(lim_pin_state, bit(Y_AXIS)))
                 serial_write("Y")
-            if (bit_istrue(lim_pin_state,bit(Z_AXIS)))
+            if (bit_istrue(lim_pin_state, bit(Z_AXIS)))
                 serial_write("Z")
 #endif
         if (ctrl_pin_state)
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-            if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_SAFETY_DOOR)) 
+            if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_SAFETY_DOOR))
                 serial_write("D")
 #endif
         if (bit_istrue(ctrl_pin_state,CONTROL_PIN_INDEX_RESET))
@@ -590,25 +590,25 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
 #endif
 
 #ifdef REPORT_FIELD_WORK_COORD_OFFSET
-    if (sys.report_wco_counter > 0) 
-        sys.report_wco_counter-- 
+    if (sys.report_wco_counter > 0)
+        sys.report_wco_counter--
     else
-        if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR)) 
-            sys.report_wco_counter:= (REPORT_WCO_REFRESH_BUSY_COUNT-1) ' Reset counter for slow refresh
+        if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR))
+            sys.report_wco_counter := (REPORT_WCO_REFRESH_BUSY_COUNT-1) ' Reset counter for slow refresh
         else
-            sys.report_wco_counter:= (REPORT_WCO_REFRESH_IDLE_COUNT-1)
-        if (sys.report_ovr_counter== 0)
-            sys.report_ovr_counter:= 1  ' Set override on next report.
+            sys.report_wco_counter := (REPORT_WCO_REFRESH_IDLE_COUNT-1)
+        if (sys.report_ovr_counter == 0)
+            sys.report_ovr_counter := 1  ' Set override on next report.
         printPgmString(PSTR("|WCO:"))
         report_util_axis_values(wco)
 #endif
 
 #ifdef REPORT_FIELD_OVERRIDES
     if (sys.report_ovr_counter > 0)
-        sys.report_ovr_counter-- 
+        sys.report_ovr_counter--
     else
         if (sys.state & (STATE_HOMING | STATE_CYCLE | STATE_HOLD | STATE_JOG | STATE_SAFETY_DOOR))
-            sys.report_ovr_counter:= (REPORT_OVR_REFRESH_BUSY_COUNT-1) ' Reset counter for slow refresh
+            sys.report_ovr_counter := (REPORT_OVR_REFRESH_BUSY_COUNT-1) ' Reset counter for slow refresh
         else
             sys.report_ovr_counter:= (REPORT_OVR_REFRESH_IDLE_COUNT-1)
         printPgmString(PSTR("|Ov:"))
@@ -635,10 +635,9 @@ PUB report_realtime_status | {byte}idx, {long}current_position[N_AXIS], {float}p
 #else
                 if (sp_state & SPINDLE_STATE_CW)
                     serial_write("S")  ' CW
-                else 
+                else
                     serial_write("C")  ' CCW
 #endif
-        
             if (cl_state & COOLANT_STATE_FLOOD)
                 serial_write("F")
 #ifdef ENABLE_M7
