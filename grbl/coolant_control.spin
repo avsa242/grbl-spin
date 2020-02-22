@@ -29,21 +29,21 @@ PUB coolant_init
     coolant_stop
 
 ' Returns current coolant output state. Overrides may alter it from programmed state.
-PUB coolant_get_state | cl_state
+PUB{uint8_t} coolant_get_state | {uint8_t}cl_state
 
-    cl_state:= COOLANT_STATE_DISABLE
+    cl_state := COOLANT_STATE_DISABLE
 #ifdef INVERT_COOLANT_FLOOD_PIN
-    if (bit_isfalse(COOLANT_FLOOD_PORT,(1 << COOLANT_FLOOD_BIT))) 
+    if (bit_isfalse(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT)))
 #else
-    if (bit_istrue(COOLANT_FLOOD_PORT,(1 << COOLANT_FLOOD_BIT))) 
+    if (bit_istrue(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT)))
 #endif
         cl_state |= COOLANT_STATE_FLOOD
   
 #ifdef ENABLE_M7
 #ifdef INVERT_COOLANT_MIST_PIN
-    if (bit_isfalse(COOLANT_MIST_PORT,(1 << COOLANT_MIST_BIT))) 
+    if (bit_isfalse(COOLANT_MIST_PORT, (1 << COOLANT_MIST_BIT)))
 #else
-    if (bit_istrue(COOLANT_MIST_PORT,(1 << COOLANT_MIST_BIT))) 
+    if (bit_istrue(COOLANT_MIST_PORT, (1 << COOLANT_MIST_BIT)))
 #endif
         cl_state |= COOLANT_STATE_MIST
 #endif
@@ -70,7 +70,7 @@ PUB coolant_stop
 ' if enabled. Also sets a flag to report an update to a coolant state.
 ' Called by coolant toggle override, parking restore, parking retract, sleep mode, g-code
 ' parser program end, and g-code parser coolant_sync.
-PUB coolant_set_state({byte}mode)
+PUB coolant_set_state({uint8_t}mode)
 
     if (sys.abort) 
         return  ' Block during abort.  
@@ -90,27 +90,26 @@ PUB coolant_set_state({byte}mode)
   
 #ifdef ENABLE_M7
 	if (mode & COOLANT_MIST_ENABLE) 
-    
 #ifdef INVERT_COOLANT_MIST_PIN
 		COOLANT_MIST_PORT &= !(1 << COOLANT_MIST_BIT)
 #else
 		COOLANT_MIST_PORT |= (1 << COOLANT_MIST_BIT)
 #endif
-    else 
+    else
 #ifdef INVERT_COOLANT_MIST_PIN
     	COOLANT_MIST_PORT |= (1 << COOLANT_MIST_BIT)
 #else
 		COOLANT_MIST_PORT &= !(1 << COOLANT_MIST_BIT)
 #endif
 #endif
-    sys.report_ovr_counter:= 0 ' Set to report change immediately
+    sys.report_ovr_counter := 0 ' Set to report change immediately
 
 ' G-code parser entry-point for setting coolant state. Forces a planner buffer sync and bails 
 ' if an abort or check-mode is active.
-PUB coolant_sync(byte mode)
-   
-    if (sys.state== STATE_CHECK_MODE) 
-        return 
+PUB coolant_sync({uint8_t} mode)
+
+    if (sys.state == STATE_CHECK_MODE)
+        return
     protocol_buffer_synchronize ' Ensure coolant turns on when specified in program.
     coolant_set_state(mode)
 

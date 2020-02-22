@@ -46,7 +46,7 @@
 #include "defaults.h"           '1 2 (contains preprocessor code only)
 #include "cpu_map.h"            '1 2 (contains preprocessor code only)
 #include "planner.h"            '1 2 3 4
-#include "coolant_control.h"    '1 2 3
+#include "coolant_control.h"    '1 2 3 4
 #include "eeprom.h"             '1 2 3
 #include "gcode.h"              '1 2 3
 #include "limits.h"             '1 2 3
