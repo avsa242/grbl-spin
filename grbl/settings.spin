@@ -19,7 +19,7 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
 
 settings_t settings
 
@@ -62,186 +62,182 @@ const __flash settings_t defaults:=
 
 
 ' Method to store startup lines into EEPROM
-PUB settings_store_startup_line({byte} n, {char *}line) | {ulong}addr
+PUB settings_store_startup_line({uint8_t} n, {char *}line) | {uint32_t}addr
 
 #ifdef FORCE_BUFFER_SYNC_DURING_EEPROM_WRITE
     protocol_buffer_synchronize ' A startup line may contain a motion and be executing. 
 #endif
-  addr:= n * (LINE_BUFFER_SIZE + 1) + EEPROM_ADDR_STARTUP_BLOCK
-  memcpy_to_eeprom_with_checksum(addr,(char*)line, LINE_BUFFER_SIZE)
+    addr := n * (LINE_BUFFER_SIZE + 1) + EEPROM_ADDR_STARTUP_BLOCK
+    memcpy_to_eeprom_with_checksum(addr, line, LINE_BUFFER_SIZE)
 
 ' Method to store build info into EEPROM
 ' NOTE: This function can only be called in IDLE state.
 PUB settings_store_build_info({char *}line)
 
 ' Build info can only be stored when state is IDLE.
-  memcpy_to_eeprom_with_checksum(EEPROM_ADDR_BUILD_INFO, line, LINE_BUFFER_SIZE)
+    memcpy_to_eeprom_with_checksum(EEPROM_ADDR_BUILD_INFO, line, LINE_BUFFER_SIZE)
 
 ' Method to store coord data parameters into EEPROM
-PUB settings_write_coord_data({byte} coord_select, {float *}coord_data) | {ulong}addr
+PUB settings_write_coord_data({uint8_t} coord_select, {float *}coord_data) | {uint32_t}addr
 
 #ifdef FORCE_BUFFER_SYNC_DURING_EEPROM_WRITE
-  protocol_buffer_synchronize
+    protocol_buffer_synchronize
 #endif
-  addr:= coord_select * ({sizeof(float)}* N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
-  memcpy_to_eeprom_with_checksum(addr, coord_data, {sizeof(float)}*N_AXIS)
+    addr := coord_select * ({sizeof(float)}* N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
+    memcpy_to_eeprom_with_checksum(addr, coord_data, {sizeof(float)}*N_AXIS)
 
 ' Method to store Grbl global settings struct and version number into EEPROM
 ' NOTE: This function can only be called in IDLE state.
 PUB write_global_settings
 
-  eeprom_put_char(0, SETTINGS_VERSION)
-  memcpy_to_eeprom_with_checksum(EEPROM_ADDR_GLOBAL, @settings, {sizeof(settings_t)})
+    eeprom_put_char(0, SETTINGS_VERSION)
+    memcpy_to_eeprom_with_checksum(EEPROM_ADDR_GLOBAL, @settings, {sizeof(settings_t)})
 
 ' Method to restore EEPROM-saved Grbl global settings back to defaults.
-PUB settings_restore(byte restore_flag) | idx, {float}coord_data[N_AXIS]
+PUB settings_restore({uint8_t} restore_flag) | {uint8_t}idx, {float}coord_data[N_AXIS]
 
-  if (restore_flag & SETTINGS_RESTORE_DEFAULTS) 
-    settings := defaults
-    write_global_settings
+    if (restore_flag & SETTINGS_RESTORE_DEFAULTS)
+        settings := defaults
+        write_global_settings
   
-  if (restore_flag & SETTINGS_RESTORE_PARAMETERS) 
-    
-    bytefill(@coord_data, 0, {sizeof}coord_data)
-    repeat idx from 0 to SETTING_INDEX_NCOORD'for (idx=0 idx =< SETTING_INDEX_NCOORD; idx++) 
-     settings_write_coord_data(idx, coord_data) 
+    if (restore_flag & SETTINGS_RESTORE_PARAMETERS)
+        bytefill(@coord_data, 0, {sizeof}coord_data)
+        repeat idx from 0 to SETTING_INDEX_NCOORD
+            settings_write_coord_data(idx, coord_data)
 
-  if (restore_flag & SETTINGS_RESTORE_STARTUP_LINES) 
-    
+    if (restore_flag & SETTINGS_RESTORE_STARTUP_LINES)
+
 #if N_STARTUP_LINE > 0
-      eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK, 0)
-      eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + 1, 0) ' Checksum
+        eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK, 0)
+        eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + 1, 0) ' Checksum
 #endif
 #if N_STARTUP_LINE > 1
-      eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + (LINE_BUFFER_SIZE + 1), 0)
-      eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + (LINE_BUFFER_SIZE + 2), 0) ' Checksum
+        eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + (LINE_BUFFER_SIZE + 1), 0)
+        eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + (LINE_BUFFER_SIZE + 2), 0) ' Checksum
 #endif
 
-  if (restore_flag & SETTINGS_RESTORE_BUILD_INFO)
-    eeprom_put_char(EEPROM_ADDR_BUILD_INFO, 0)
-    eeprom_put_char(EEPROM_ADDR_BUILD_INFO + 1, 0) ' Checksum
+    if (restore_flag & SETTINGS_RESTORE_BUILD_INFO)
+        eeprom_put_char(EEPROM_ADDR_BUILD_INFO, 0)
+        eeprom_put_char(EEPROM_ADDR_BUILD_INFO + 1, 0) ' Checksum
 
 ' Reads startup line from EEPROM. Updated pointed line string data.
-PUB settings_read_startup_line({byte}n, {char *}line) | {ulong}addr
+PUB settings_read_startup_line({uint8_t}n, {char *}line) | {uint32_t}addr
 
-    
-  addr := n * (LINE_BUFFER_SIZE + 1) + EEPROM_ADDR_STARTUP_BLOCK
-  if (!(memcpy_from_eeprom_with_checksum(line, addr, LINE_BUFFER_SIZE))) 
-    ' Reset line with default value
-    line[0] := 0 ' Empty line
-    settings_store_startup_line(n, line)
-    return FALSE
-  
-  return TRUE
+    addr := n * (LINE_BUFFER_SIZE + 1) + EEPROM_ADDR_STARTUP_BLOCK
+    if (!(memcpy_from_eeprom_with_checksum(line, addr, LINE_BUFFER_SIZE))) 
+        ' Reset line with default value
+        line[0] := 0 ' Empty line
+        settings_store_startup_line(n, line)
+        return FALSE
+    return TRUE
 
 ' Reads startup line from EEPROM. Updated pointed line string data.
 PUB settings_read_build_info({char *}line)
 
-  if (!(memcpy_from_eeprom_with_checksum(line, EEPROM_ADDR_BUILD_INFO, LINE_BUFFER_SIZE))) 
-    ' Reset line with default value
-    line[0] := 0 ' Empty line
-    settings_store_build_info(line)
-    return FALSE
-  
-  return TRUE
+    if (!(memcpy_from_eeprom_with_checksum(line, EEPROM_ADDR_BUILD_INFO, LINE_BUFFER_SIZE)))
+        ' Reset line with default value
+        line[0] := 0 ' Empty line
+        settings_store_build_info(line)
+        return FALSE
+    return TRUE
 
 ' Read selected coordinate data from EEPROM. Updates pointed coord_data value.
-PUB settings_read_coord_data({byte}coord_select, {float *}coord_data) | {ulong}addr
+PUB settings_read_coord_data({uint8_t}coord_select, {float *}coord_data) | {uint32_t}addr
 
-  addr := coord_select * ({sizeof(float)}*N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
-  if (!(memcpy_from_eeprom_with_checksum(coord_data, addr, {sizeof(float)}*N_AXIS))) 
-    ' Reset with default zero vector
-    clear_vector_float(coord_data)
-    settings_write_coord_data(coord_select,coord_data)
-    return FALSE
-  return TRUE
+    addr := coord_select * ({sizeof(float)}*N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
+    if (!(memcpy_from_eeprom_with_checksum(coord_data, addr, {sizeof(float)}*N_AXIS)))
+        ' Reset with default zero vector
+        clear_vector_float(coord_data)
+        settings_write_coord_data(coord_select,coord_data)
+        return FALSE
+    return TRUE
 
 ' Reads Grbl global settings struct from EEPROM.
 PUB read_global_settings | version
-    
-  ' Check version-byte of eeprom
-  version := eeprom_get_char(0)
-  if (version== SETTINGS_VERSION) 
-    ' Read settings-record and check checksum
-    if (!(memcpy_from_eeprom_with_checksum(@settings, EEPROM_ADDR_GLOBAL, {sizeof}settings_t))) 
-      return(FALSE)
-   else 
-    return(FALSE)
-  return(TRUE)
+
+    ' Check version-byte of eeprom
+    version := eeprom_get_char(0)
+    if (version == SETTINGS_VERSION) 
+        ' Read settings-record and check checksum
+        if (!(memcpy_from_eeprom_with_checksum(@settings, EEPROM_ADDR_GLOBAL, {sizeof}settings_t))) 
+            return(FALSE)
+    else 
+        return(FALSE)
+    return(TRUE)
 
 ' A helper method to set settings from command line
-PUB settings_store_global_setting({byte}parameter, {float}value) | set_idx, int_value
+PUB settings_store_global_setting({uint8_t}parameter, {float}value) | {uint8_t}set_idx, int_value
 
-    if (value < 0.0) 
+    if (value < 0.0)
         return(STATUS_NEGATIVE_VALUE)
-    if (parameter => AXIS_SETTINGS_START_VAL) 
+    if (parameter => AXIS_SETTINGS_START_VAL)
     ' Store axis configuration. Axis numbering sequence set by AXIS_SETTING defines.
     ' NOTE: Ensure the setting index corresponds to the report.c settings printout.
         parameter -= AXIS_SETTINGS_START_VAL
         set_idx := 0
-        repeat while (set_idx < AXIS_N_SETTINGS) 
-            if (parameter < N_AXIS) 
-            ' Valid axis setting found.
+        repeat while (set_idx < AXIS_N_SETTINGS)
+            if (parameter < N_AXIS)
+                ' Valid axis setting found.
                 case (set_idx)
                     0:
 #ifdef MAX_STEP_RATE_HZ
-                        if (value*settings.max_rate[parameter] > (MAX_STEP_RATE_HZ*60.0)) 
+                        if (value*settings.max_rate[parameter] > (MAX_STEP_RATE_HZ*60.0))
                             return(STATUS_MAX_STEP_RATE_EXCEEDED) 
 #endif
-                        settings.steps_per_mm[parameter]:= value
+                        settings.steps_per_mm[parameter] := value
                     1:
 #ifdef MAX_STEP_RATE_HZ
-                        if (value*settings.steps_per_mm[parameter] > (MAX_STEP_RATE_HZ*60.0)) 
-                            return(STATUS_MAX_STEP_RATE_EXCEEDED) 
+                        if (value*settings.steps_per_mm[parameter] > (MAX_STEP_RATE_HZ*60.0))
+                            return(STATUS_MAX_STEP_RATE_EXCEEDED)
 #endif
-                        settings.max_rate[parameter]:= value
-                    2: settings.acceleration[parameter]:= value*60*60 ; ' Convert to mm/min^2 for grbl internal use.
-                    3: settings.max_travel[parameter]:= -value ;  ' Store as negative for grbl internal use.
-         ' Exit repeat while-loop after setting has been configured and proceed to the EEPROM write call.
+                        settings.max_rate[parameter] := value
+                    2: settings.acceleration[parameter] := value*60*60 ; ' Convert to mm/min^2 for grbl internal use.
+                    3: settings.max_travel[parameter] := -value ;  ' Store as negative for grbl internal use.
+            quit ' Exit repeat while-loop after setting has been configured and proceed to the EEPROM write call.
             else 
                 set_idx++
                 ' If axis index greater than N_AXIS or setting index greater than number of axis settings, error out.
-                if ((parameter < AXIS_SETTINGS_INCREMENT) || (set_idx== AXIS_N_SETTINGS)) 
+                if ((parameter < AXIS_SETTINGS_INCREMENT) OR (set_idx == AXIS_N_SETTINGS)) 
                     return(STATUS_INVALID_STATEMENT) 
                 parameter -= AXIS_SETTINGS_INCREMENT
     else 
         ' Store non-axis Grbl settings
-        int_value:= trunc(value)
+        int_value := trunc(value)
         case(parameter) 
             0:
                 if (int_value < 3) 
                     return(STATUS_SETTING_STEP_PULSE_MIN) 
-                settings.pulse_microseconds:= int_value
-            1: settings.stepper_idle_lock_time:= int_value
+                settings.pulse_microseconds := int_value
+            1: settings.stepper_idle_lock_time := int_value
             2:
-                settings.step_invert_mask:= int_value
+                settings.step_invert_mask := int_value
                 st_generate_step_dir_invert_masks ' Regenerate step and direction port invert masks.
             3:
-                settings.dir_invert_mask:= int_value
+                settings.dir_invert_mask := int_value
                 st_generate_step_dir_invert_masks ' Regenerate step and direction port invert masks.
             4: ' Reset to ensure change. Immediate re-init may cause problems.
-                if (int_value) 
-                    settings.flags |= BITFLAG_INVERT_ST_ENABLE 
-                else 
-                    settings.flags &= !BITFLAG_INVERT_ST_ENABLE 
+                if (int_value)
+                    settings.flags |= BITFLAG_INVERT_ST_ENABLE
+                else
+                    settings.flags &= !BITFLAG_INVERT_ST_ENABLE
             5: ' Reset to ensure change. Immediate re-init may cause problems.
-                if (int_value) 
+                if (int_value)
                     settings.flags |= BITFLAG_INVERT_LIMIT_PINS
                 else 
                     settings.flags &= !BITFLAG_INVERT_LIMIT_PINS 
             6: ' Reset to ensure change. Immediate re-init may cause problems.
-                if (int_value) 
+                if (int_value)
                     settings.flags |= BITFLAG_INVERT_PROBE_PIN 
                 else 
                     settings.flags &= !BITFLAG_INVERT_PROBE_PIN 
                 probe_configure_invert_mask(FALSE)
-            10: settings.status_report_mask:= int_value
-            11: settings.junction_deviation:= value
-            12: settings.arc_tolerance:= value
+            10: settings.status_report_mask := int_value
+            11: settings.junction_deviation := value
+            12: settings.arc_tolerance := value
             13:
-                if (int_value) 
+                if (int_value)
                     settings.flags |= BITFLAG_REPORT_INCHES 
-                else 
+                else
                     settings.flags &= !BITFLAG_REPORT_INCHES 
                 system_flag_wco_change ' Make sure WCO is immediately updated.
             20:
@@ -263,13 +259,13 @@ PUB settings_store_global_setting({byte}parameter, {float}value) | set_idx, int_
                 else 
                     settings.flags &= !BITFLAG_HOMING_ENABLE
                     settings.flags &= !BITFLAG_SOFT_LIMIT_ENABLE ' Force disable soft-limits.
-            23: settings.homing_dir_mask:= int_value
-            24: settings.homing_feed_rate:= value
-            25: settings.homing_seek_rate:= value
-            26: settings.homing_debounce_delay:= int_value
-            27: settings.homing_pulloff:= value
-            30: settings.rpm_max:= value spindle_init ' Re-initialize spindle rpm calibration
-            31: settings.rpm_min:= value spindle_init ' Re-initialize spindle rpm calibration
+            23: settings.homing_dir_mask := int_value
+            24: settings.homing_feed_rate := value
+            25: settings.homing_seek_rate := value
+            26: settings.homing_debounce_delay := int_value
+            27: settings.homing_pulloff := value
+            30: settings.rpm_max := value spindle_init ' Re-initialize spindle rpm calibration
+            31: settings.rpm_min := value spindle_init ' Re-initialize spindle rpm calibration
             32:
 #ifdef VARIABLE_SPINDLE
                 if (int_value) 
@@ -287,36 +283,35 @@ PUB settings_store_global_setting({byte}parameter, {float}value) | set_idx, int_
 ' Initialize the config subsystem
 PUB settings_init 
 
-    if(!read_global_settings) 
-
-    report_status_message(STATUS_SETTING_READ_FAIL)
-    settings_restore(SETTINGS_RESTORE_ALL) ' Force restore all EEPROM data.
-    report_grbl_settings
+    if(!read_global_settings)
+        report_status_message(STATUS_SETTING_READ_FAIL)
+        settings_restore(SETTINGS_RESTORE_ALL) ' Force restore all EEPROM data.
+        report_grbl_settings
 
 ' Returns step pin mask according to Grbl internal axis indexing.
-PUB get_step_pin_mask({byte} axis_idx)
+PUB get_step_pin_mask({uint8_t} axis_idx)
 
-    if (axis_idx== X_AXIS ) 'XXX case
+    if (axis_idx == X_AXIS ) 'XXX case
         return((1<<X_STEP_BIT)) 
-    if (axis_idx== Y_AXIS ) 
+    if (axis_idx == Y_AXIS ) 
         return((1<<Y_STEP_BIT)) 
     return((1<<Z_STEP_BIT))
 
 ' Returns direction pin mask according to Grbl internal axis indexing.
-PUB get_direction_pin_mask({byte} axis_idx)
+PUB get_direction_pin_mask({uint8_t} axis_idx)
 
-    if ( axis_idx== X_AXIS ) 
+    if ( axis_idx == X_AXIS ) 
         return((1<<X_DIRECTION_BIT)) 
-    if ( axis_idx== Y_AXIS ) 
+    if ( axis_idx == Y_AXIS ) 
         return((1<<Y_DIRECTION_BIT)) 
     return((1<<Z_DIRECTION_BIT))
 
 ' Returns limit pin mask according to Grbl internal axis indexing.
 PUB get_limit_pin_mask({byte }axis_idx)
 
-    if ( axis_idx== X_AXIS ) 
+    if ( axis_idx == X_AXIS ) 
         return((1<<X_LIMIT_BIT)) 
-    if ( axis_idx== Y_AXIS ) 
+    if ( axis_idx == Y_AXIS ) 
         return((1<<Y_LIMIT_BIT)) 
     return((1<<Z_LIMIT_BIT))
 
