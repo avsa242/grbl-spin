@@ -21,6 +21,7 @@
 
 '#include "core.con.grbl.spin"
 
+' XXX write to EEPROM
 settings_t settings
 
 const __flash settings_t defaults:= 
@@ -124,7 +125,7 @@ PUB settings_restore({uint8_t} restore_flag) | {uint8_t}idx, {float}coord_data[N
 PUB settings_read_startup_line({uint8_t}n, {char *}line) | {uint32_t}addr
 
     addr := n * (LINE_BUFFER_SIZE + 1) + EEPROM_ADDR_STARTUP_BLOCK
-    if (!(memcpy_from_eeprom_with_checksum(line, addr, LINE_BUFFER_SIZE))) 
+    if (NOT(memcpy_from_eeprom_with_checksum(line, addr, LINE_BUFFER_SIZE)))
         ' Reset line with default value
         line[0] := 0 ' Empty line
         settings_store_startup_line(n, line)
@@ -134,7 +135,7 @@ PUB settings_read_startup_line({uint8_t}n, {char *}line) | {uint32_t}addr
 ' Reads startup line from EEPROM. Updated pointed line string data.
 PUB settings_read_build_info({char *}line)
 
-    if (!(memcpy_from_eeprom_with_checksum(line, EEPROM_ADDR_BUILD_INFO, LINE_BUFFER_SIZE)))
+    if (NOT(memcpy_from_eeprom_with_checksum(line, EEPROM_ADDR_BUILD_INFO, LINE_BUFFER_SIZE)))
         ' Reset line with default value
         line[0] := 0 ' Empty line
         settings_store_build_info(line)
@@ -145,7 +146,7 @@ PUB settings_read_build_info({char *}line)
 PUB settings_read_coord_data({uint8_t}coord_select, {float *}coord_data) | {uint32_t}addr
 
     addr := coord_select * ({sizeof(float)}*N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
-    if (!(memcpy_from_eeprom_with_checksum(coord_data, addr, {sizeof(float)}*N_AXIS)))
+    if (NOT(memcpy_from_eeprom_with_checksum(coord_data, addr, {sizeof(float)}*N_AXIS)))
         ' Reset with default zero vector
         clear_vector_float(coord_data)
         settings_write_coord_data(coord_select,coord_data)
@@ -157,9 +158,9 @@ PUB read_global_settings | version
 
     ' Check version-byte of eeprom
     version := eeprom_get_char(0)
-    if (version == SETTINGS_VERSION) 
+    if (version == SETTINGS_VERSION)
         ' Read settings-record and check checksum
-        if (!(memcpy_from_eeprom_with_checksum(@settings, EEPROM_ADDR_GLOBAL, {sizeof}settings_t))) 
+        if (NOT(memcpy_from_eeprom_with_checksum(@settings, EEPROM_ADDR_GLOBAL, {sizeof}settings_t)))
             return(FALSE)
     else 
         return(FALSE)
@@ -283,7 +284,7 @@ PUB settings_store_global_setting({uint8_t}parameter, {float}value) | {uint8_t}s
 ' Initialize the config subsystem
 PUB settings_init 
 
-    if(!read_global_settings)
+    ifnot (read_global_settings)
         report_status_message(STATUS_SETTING_READ_FAIL)
         settings_restore(SETTINGS_RESTORE_ALL) ' Force restore all EEPROM data.
         report_grbl_settings
@@ -291,27 +292,27 @@ PUB settings_init
 ' Returns step pin mask according to Grbl internal axis indexing.
 PUB get_step_pin_mask({uint8_t} axis_idx)
 
-    if (axis_idx == X_AXIS ) 'XXX case
-        return((1<<X_STEP_BIT)) 
-    if (axis_idx == Y_AXIS ) 
-        return((1<<Y_STEP_BIT)) 
+    if (axis_idx == X_AXIS) 'XXX case
+        return((1<<X_STEP_BIT))
+    if (axis_idx == Y_AXIS)
+        return((1<<Y_STEP_BIT))
     return((1<<Z_STEP_BIT))
 
 ' Returns direction pin mask according to Grbl internal axis indexing.
 PUB get_direction_pin_mask({uint8_t} axis_idx)
 
-    if ( axis_idx == X_AXIS ) 
-        return((1<<X_DIRECTION_BIT)) 
-    if ( axis_idx == Y_AXIS ) 
-        return((1<<Y_DIRECTION_BIT)) 
+    if (axis_idx == X_AXIS)
+        return((1<<X_DIRECTION_BIT))
+    if (axis_idx == Y_AXIS)
+        return((1<<Y_DIRECTION_BIT))
     return((1<<Z_DIRECTION_BIT))
 
 ' Returns limit pin mask according to Grbl internal axis indexing.
 PUB get_limit_pin_mask({byte }axis_idx)
 
-    if ( axis_idx == X_AXIS ) 
-        return((1<<X_LIMIT_BIT)) 
-    if ( axis_idx == Y_AXIS ) 
-        return((1<<Y_LIMIT_BIT)) 
+    if (axis_idx == X_AXIS)
+        return((1<<X_LIMIT_BIT))
+    if (axis_idx == Y_AXIS)
+        return((1<<Y_LIMIT_BIT))
     return((1<<Z_LIMIT_BIT))
 
