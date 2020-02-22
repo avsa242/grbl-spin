@@ -51,8 +51,8 @@
 #include "gcode.h"              '1 2 3 4
 #include "limits.h"             '1 2 3 4
 #include "motion_control.h"     '1 2 3 4
-#include "print.h"              '1 2 3
-#include "probe.h"              '1 2 3
+#include "print.h"              '1 2 3 4
+#include "probe.h"              '1 2 3 4
 #include "protocol.h"           '1 2 3
 #include "report.h"             '1 2 3
 #include "serial.h"             '1 2 3  'XXX hardware specific bits in here
