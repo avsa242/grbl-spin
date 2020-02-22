@@ -56,7 +56,7 @@
 #include "protocol.h"           '1 2 3 4
 #include "report.h"             '1 2 3 4
 #include "serial.h"             '1 2 3 4 'XXX hardware specific bits in here
-#include "spindle_control.h"    '1 2 3
+#include "spindle_control.h"    '1 2 3 4
 #include "stepper.h"            '1 2 3
 #include "jog.h"                '1 2 3
 
