@@ -39,99 +39,105 @@
 '#include <stdbool.h>
 
 ' Define the Grbl system include files. NOTE: Do not alter organization.
-#include "config.h"             '1 2 3 (contains preprocessor code only)
-#include "nuts_bolts.h"         '1 2 3 4
-#include "settings.h"           '1 2 3 4
-#include "system.h"             '1 2 3 4
-#include "defaults.h"           '1 2 (contains preprocessor code only)
-#include "cpu_map.h"            '1 2 (contains preprocessor code only)
-#include "planner.h"            '1 2 3 4
-#include "coolant_control.h"    '1 2 3 4
-#include "eeprom.h"             '1 2 3 4
-#include "gcode.h"              '1 2 3 4
-#include "limits.h"             '1 2 3 4
-#include "motion_control.h"     '1 2 3 4
-#include "print.h"              '1 2 3 4
-#include "probe.h"              '1 2 3 4
-#include "protocol.h"           '1 2 3 4
-#include "report.h"             '1 2 3 4
-#include "serial.h"             '1 2 3 4 'XXX hardware specific bits in here
-#include "spindle_control.h"    '1 2 3 4
-#include "stepper.h"            '1 2 3 4
-#include "jog.h"                '1 2 3 4
+#include "con.config.spin"             '1 2 3 (contains preprocessor code only)
+#include "con.nuts_bolts.spin"         '1 2 3 4
+#include "con.settings.spin"           '1 2 3 4
+#include "con.system.spin"             '1 2 3 4
+#include "con.defaults.spin"           '1 2 (contains preprocessor code only)
+#include "con.cpu_map.spin"            '1 2 (contains preprocessor code only)
+#include "con.planner.spin"            '1 2 3 4
+#include "con.coolant_control.spin"    '1 2 3 4
+#include "con.eeprom.spin"             '1 2 3 4
+#include "con.gcode.spin"              '1 2 3 4
+#include "con.limits.spin"             '1 2 3 4
+#include "con.motion_control.spin"     '1 2 3 4
+#include "con.print.spin"              '1 2 3 4
+#include "con.probe.spin"              '1 2 3 4
+#include "con.protocol.spin"           '1 2 3 4
+#include "con.report.spin"             '1 2 3 4
+#include "con.serial.spin"             '1 2 3 4 'XXX hardware specific bits in here
+#include "con.spindle_control.spin"    '1 2 3 4
+#include "con.stepper.spin"            '1 2 3 4
+#include "con.jog.spin"                '1 2 3 4
 
 ' ---------------------------------------------------------------------------------------
 ' COMPILE-TIME ERROR CHECKING OF DEFINE VALUES:
 
 #ifndef HOMING_CYCLE_0
-  #error "Required HOMING_CYCLE_0 not defined."
+#error "Required HOMING_CYCLE_0 not defined."
 #endif
 
-#if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(VARIABLE_SPINDLE)
-  #error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with VARIABLE_SPINDLE enabled"
+#ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
+#ifndef VARIABLE_SPINDLE
+#error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with VARIABLE_SPINDLE enabled"
 #endif
 
-#if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(CPU_MAP_ATMEGA328P)
-  #error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with a 328p processor"
+#ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
+#ifndef CPU_MAP_ATMEGA328P
+#error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with a 328p processor"
 #endif
 
-#if !defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && defined(SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED)
-  #error "SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED may only be used with USE_SPINDLE_DIR_AS_ENABLE_PIN enabled"
+#ifndef USE_SPINDLE_DIR_AS_ENABLE_PIN
+#ifdef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
+#error "SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED may only be used with USE_SPINDLE_DIR_AS_ENABLE_PIN enabled"
 #endif
 
-#if defined(PARKING_ENABLE)
-  #if defined(HOMING_FORCE_SET_ORIGIN)
-    #error "HOMING_FORCE_SET_ORIGIN is not supported with PARKING_ENABLE at this time."
-  #endif
+#ifdef PARKING_ENABLE
+#ifdef HOMING_FORCE_SET_ORIGIN
+#error "HOMING_FORCE_SET_ORIGIN is not supported with PARKING_ENABLE at this time."
+#endif
 #endif
 
-#if defined(ENABLE_PARKING_OVERRIDE_CONTROL)
-  #if !defined(PARKING_ENABLE)
-    #error "ENABLE_PARKING_OVERRIDE_CONTROL must be enabled with PARKING_ENABLE."
-  #endif
+#ifdef ENABLE_PARKING_OVERRIDE_CONTROL
+#ifndef PARKING_ENABLE
+#error "ENABLE_PARKING_OVERRIDE_CONTROL must be enabled with PARKING_ENABLE."
+#endif
 #endif
 
-#if defined(SPINDLE_PWM_MIN_VALUE)
-  #if !(SPINDLE_PWM_MIN_VALUE > 0)
-    #error "SPINDLE_PWM_MIN_VALUE must be greater than zero."
-  #endif
+#ifdef SPINDLE_PWM_MIN_VALUE
+#if SPINDLE_PWM_MIN_VALUE == 0
+#error "SPINDLE_PWM_MIN_VALUE must be greater than zero."
+#endif
 #endif
 
-#if (REPORT_WCO_REFRESH_BUSY_COUNT < REPORT_WCO_REFRESH_IDLE_COUNT)
-  #error "WCO busy refresh is less than idle refresh."
+#if REPORT_WCO_REFRESH_BUSY_COUNT < REPORT_WCO_REFRESH_IDLE_COUNT
+#error "WCO busy refresh is less than idle refresh."
 #endif
-#if (REPORT_OVR_REFRESH_BUSY_COUNT < REPORT_OVR_REFRESH_IDLE_COUNT)
-  #error "Override busy refresh is less than idle refresh."
+#if REPORT_OVR_REFRESH_BUSY_COUNT < REPORT_OVR_REFRESH_IDLE_COUNT
+#error "Override busy refresh is less than idle refresh."
 #endif
-#if (REPORT_WCO_REFRESH_IDLE_COUNT < 2)
-  #error "WCO refresh must be greater than one."
+#if REPORT_WCO_REFRESH_IDLE_COUNT < 2
+#error "WCO refresh must be greater than one."
 #endif
-#if (REPORT_OVR_REFRESH_IDLE_COUNT < 1)
-  #error "Override refresh must be greater than zero."
+#if REPORT_OVR_REFRESH_IDLE_COUNT < 1
+#error "Override refresh must be greater than zero."
 #endif
 
-#if defined(ENABLE_DUAL_AXIS)
-  #if !((DUAL_AXIS_SELECT :== X_AXIS) || (DUAL_AXIS_SELECT == Y_AXIS))
-    #error "Dual axis currently supports X or Y axes only."
-  #endif
-  #if defined(DUAL_AXIS_CONFIG_CNC_SHIELD_CLONE) && defined(VARIABLE_SPINDLE)
-    #error "VARIABLE_SPINDLE not supported with DUAL_AXIS_CNC_SHIELD_CLONE."
-  #endif
-  #if defined(DUAL_AXIS_CONFIG_CNC_SHIELD_CLONE) && defined(DUAL_AXIS_CONFIG_PROTONEER_V3_51)
-    #error "More than one dual axis configuration found. Select one."
-  #endif
-  #if !defined(DUAL_AXIS_CONFIG_CNC_SHIELD_CLONE) && !defined(DUAL_AXIS_CONFIG_PROTONEER_V3_51)
-    #error "No supported dual axis configuration found. Select one."
-  #endif
-  #if defined(COREXY)
-    #error "CORE XY not supported with dual axis feature."
-  #endif
-  #if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN)
-    #error "USE_SPINDLE_DIR_AS_ENABLE_PIN not supported with dual axis feature."
-  #endif
-  #if defined(ENABLE_M7)
-    #error "ENABLE_M7 not supported with dual axis feature."
-  #endif
+#ifdef ENABLE_DUAL_AXIS
+#if !((DUAL_AXIS_SELECT == X_AXIS) || (DUAL_AXIS_SELECT == Y_AXIS))
+#error "Dual axis currently supports X or Y axes only."
+#endif
+#ifdef DUAL_AXIS_CONFIG_CNC_SHIELD_CLONE
+#ifdef VARIABLE_SPINDLE
+#error "VARIABLE_SPINDLE not supported with DUAL_AXIS_CNC_SHIELD_CLONE."
+#endif
+#ifdef DUAL_AXIS_CONFIG_CNC_SHIELD_CLONE
+#ifdef DUAL_AXIS_CONFIG_PROTONEER_V3_51
+#error "More than one dual axis configuration found. Select one."
+#endif
+#ifndef DUAL_AXIS_CONFIG_CNC_SHIELD_CLONE
+#ifndef DUAL_AXIS_CONFIG_PROTONEER_V3_51
+#error "No supported dual axis configuration found. Select one."
+#endif
+#ifdef COREXY
+#error "CORE XY not supported with dual axis feature."
+#endif
+#ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
+#error "USE_SPINDLE_DIR_AS_ENABLE_PIN not supported with dual axis feature."
+#endif
+#ifdef ENABLE_M7
+#error "ENABLE_M7 not supported with dual axis feature."
+#endif
 #endif
 
 ' ---------------------------------------------------------------------------------------

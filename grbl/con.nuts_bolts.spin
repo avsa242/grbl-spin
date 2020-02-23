@@ -28,8 +28,10 @@
 #define SOME_LARGE_VALUE 1.0E+38
 
 ' Axis array index values. Must start with 0 and be continuous.
-#define N_AXIS 3 ' Number of axes
-#define X_AXIS 0 ' Axis indexing value.
+' Number of axes
+#define N_AXIS 3
+' Axis indexing value
+#define X_AXIS 0
 #define Y_AXIS 1
 #define Z_AXIS 2
 ' #define A_AXIS 3
@@ -37,8 +39,10 @@
 ' CoreXY motor assignments. DO NOT ALTER.
 ' NOTE: If the A and B motor axis bindings are changed, this effects the CoreXY equations.
 #ifdef COREXY
-#define A_MOTOR X_AXIS ' Must be X_AXIS
-#define B_MOTOR Y_AXIS ' Must be Y_AXIS
+' Must be X_AXIS
+#define A_MOTOR X_AXIS
+' Must be Y_AXIS
+#define B_MOTOR Y_AXIS
 #endif
 
 ' Conversions
@@ -50,18 +54,64 @@
 #define DELAY_MODE_SYS_SUSPEND 1
 
 ' Useful macros
-#define clear_vector(a) bytefill(a, 0, {sizeof}a)
-#define clear_vector_float(a) bytefill(a, 0.0, {sizeof(float)}*N_AXIS)
-' #define clear_vector_long(a) bytefill(a, 0.0, {sizeof(long)}*N_AXIS)
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-#define min(a,b) (((a) < (b)) ? (a) : (b))
-#define isequal_position_vector(a,b) !(memcmp(a, b, {sizeof(float)}*N_AXIS))
+PUB clear_vector(a)
+
+    bytefill(a, 0, {sizeof}a)
+
+PUB clear_vector_float(a)
+
+    bytefill(a, 0{.0}, {sizeof(float)}4 * N_AXIS)
+
+PUB clear_vector_long(a)
+
+    bytefill(a, 0{.0}, {sizeof(long)}4 * N_AXIS)
+
+PUB max_(a, b)
+
+    if a > b
+        return a
+    else
+        return b
+
+PUB min_(a, b)
+
+    if a < b
+        return a
+    else
+        return b
+
+PUB isequal_position_vector(a, b)
+
+    repeat N_AXIS
+        ifnot a[N_AXIS] == b[N_AXIS]
+            return FALSE
+
+    return TRUE
+'#define isequal_position_vector(a,b) !(memcmp(a, b, {sizeof(float)}*N_AXIS))
 
 ' Bit field and masking macros
-#define bit(n) (1 << n)
-#define bit_true(x,mask) (x) |= (mask)
-#define bit_false(x,mask) (x) &= !(mask)
-#define bit_istrue(x,mask) ((x & mask) <> 0)
-#define bit_isfalse(x,mask) ((x & mask) == 0)
+PUB bit(n)
+
+    return 1 << n
+
+PUB bit_true(x, mask)
+
+    x |= mask
+    return x
+
+PUB bit_false(x, mask)
+
+    x &= !mask
+    return x
+
+PUB bit_istrue(x, mask)
+
+    return (x & mask) <> 0
+'#define bit_istrue(x,mask) ((x & mask) <> 0)
+
+PUB bit_isfalse(x, mask)
+
+    return (x & mask) == 0
+'#define bit_isfalse(x,mask) ((x & mask) == 0)
 
 #endif
