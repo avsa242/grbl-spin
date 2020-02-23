@@ -233,23 +233,23 @@ VAR
 PUB st_wake_up
 
     ' Enable stepper drivers.
-    if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) 
-        STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT) 
-    else 
-        STEPPERS_DISABLE_PORT &= !(1<<STEPPERS_DISABLE_BIT) 
+    if (bit_istrue(settings.flags, BITFLAG_INVERT_ST_ENABLE))
+        STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT)
+    else
+        STEPPERS_DISABLE_PORT &= !(1<<STEPPERS_DISABLE_BIT)
 
     ' Initialize stepper output bits to ensure first ISR call does not step.
-    st.step_outbits:= step_port_invert_mask
+    st.step_outbits := step_port_invert_mask
 
     ' Initialize step pulse timing from settings. Here to ensure updating after re-writing.
 #ifdef STEP_PULSE_DELAY
     ' Set total step pulse time after direction pin set. Ad hoc computation from oscilloscope.
-    st.step_pulse_time:= -(((settings.pulse_microseconds+STEP_PULSE_DELAY-2)*TICKS_PER_MICROSECOND) >> 3)
+    st.step_pulse_time := -(((settings.pulse_microseconds+STEP_PULSE_DELAY-2)*TICKS_PER_MICROSECOND) >> 3)
     ' Set delay between direction pin write and step command.
-    OCR0A:= -(((settings.pulse_microseconds)*TICKS_PER_MICROSECOND) >> 3)
+    OCR0A := -(((settings.pulse_microseconds)*TICKS_PER_MICROSECOND) >> 3)
 #else ' Normal operation
     ' Set step pulse time. Ad hoc computation from oscilloscope. Uses two's complement.
-    st.step_pulse_time:= -(((settings.pulse_microseconds-2)*TICKS_PER_MICROSECOND) >> 3)
+    st.step_pulse_time := -(((settings.pulse_microseconds-2)*TICKS_PER_MICROSECOND) >> 3)
 #endif
 
   ' Enable Stepper Driver Interrupt
@@ -260,19 +260,19 @@ PUB st_go_idle | {bool} pin_state
 
     ' Disable Stepper Driver Interrupt. Allow Stepper Port Reset Interrupt to finish, if active.
     TIMSK1 &= !(1<<OCIE1A) ' Disable Timer1 interrupt
-    TCCR1B:= (TCCR1B & !((1<<CS12) | (1<<CS11))) | (1<<CS10) ' Reset clock to no prescaling.
-    busy:= false
+    TCCR1B := (TCCR1B & !((1<<CS12) | (1<<CS11))) | (1<<CS10) ' Reset clock to no prescaling.
+    busy := false
 
     ' Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
-    pin_state:= false ' Keep enabled.
-    if (((settings.stepper_idle_lock_time <> $ff) || sys_rt_exec_alarm || sys.state== STATE_SLEEP) && sys.state != STATE_HOMING) 
+    pin_state := false ' Keep enabled.
+    if (((settings.stepper_idle_lock_time <> $ff) OR sys_rt_exec_alarm OR sys.state == STATE_SLEEP) AND sys.state <> STATE_HOMING) 
 
         ' Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
         ' stop and not drift from residual inertial forces at the end of the last movement.
         delay_ms(settings.stepper_idle_lock_time)
-        pin_state:= true ' Override. Disable steppers.
-    if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) 
-        pin_state:= !pin_state  ' Apply pin invert.
+        pin_state := true ' Override. Disable steppers.
+    if (bit_istrue(settings.flags, BITFLAG_INVERT_ST_ENABLE)) 
+        pin_state := !pin_state  ' Apply pin invert.
     if (pin_state) 
         STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT) 
     else 
@@ -327,71 +327,71 @@ PUB st_go_idle | {bool} pin_state
 ' TODO: Replace direct updating of the int32 position counters in the ISR somehow. Perhaps use smaller
 ' int8 variables and update position counters only when a segment completes. This can get complicated
 ' with probing and homing cycles that require true real-time positions.
-ISR(TIMER1_COMPA_vect)
+PUB ISR(TIMER1_COMPA_vect)
 
-    if (busy) 
-        return  ' The busy-flag is used to a reentering this interrupt
+    if (busy)
+        return  ' The busy-flag is used to avoid reentering this interrupt
 
     ' Set the direction pins a couple of nanoseconds before we step the steppers
-    DIRECTION_PORT:= (DIRECTION_PORT & !DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK)
+    DIRECTION_PORT := (DIRECTION_PORT & !DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK)
 #ifdef ENABLE_DUAL_AXIS
-    DIRECTION_PORT_DUAL:= (DIRECTION_PORT_DUAL & !DIRECTION_MASK_DUAL) | (st.dir_outbits_dual & DIRECTION_MASK_DUAL)
+    DIRECTION_PORT_DUAL := (DIRECTION_PORT_DUAL & !DIRECTION_MASK_DUAL) | (st.dir_outbits_dual & DIRECTION_MASK_DUAL)
 #endif
 
   ' Then pulse the stepping pins
 #ifdef STEP_PULSE_DELAY
-    st.step_bits:= (STEP_PORT & !STEP_MASK) | st.step_outbits ' Store out_bits to prevent overwriting.
+    st.step_bits := (STEP_PORT & !STEP_MASK) | st.step_outbits ' Store out_bits to prevent overwriting.
 #ifdef ENABLE_DUAL_AXIS
-    st.step_bits_dual:= (STEP_PORT_DUAL & !STEP_MASK_DUAL) | st.step_outbits_dual
+    st.step_bits_dual := (STEP_PORT_DUAL & !STEP_MASK_DUAL) | st.step_outbits_dual
 #endif
 #else  ' Normal operation
-    STEP_PORT:= (STEP_PORT & !STEP_MASK) | st.step_outbits
+    STEP_PORT := (STEP_PORT & !STEP_MASK) | st.step_outbits
 #ifdef ENABLE_DUAL_AXIS
-    STEP_PORT_DUAL:= (STEP_PORT_DUAL & !STEP_MASK_DUAL) | st.step_outbits_dual
+    STEP_PORT_DUAL := (STEP_PORT_DUAL & !STEP_MASK_DUAL) | st.step_outbits_dual
 #endif
 #endif
 
     ' Enable step pulse reset timer so that The Stepper Port Reset Interrupt can reset the signal after
     ' exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
-    TCNT0:= st.step_pulse_time ' Reload Timer0 counter
-    TCCR0B:= (1<<CS01) ' Begin Timer0. Full speed, 1/8 prescaler
+    TCNT0 := st.step_pulse_time ' Reload Timer0 counter
+    TCCR0B := (1<<CS01) ' Begin Timer0. Full speed, 1/8 prescaler
 
-    busy:= true
+    busy := true
     sei ' Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
         ' NOTE: The remaining code in this ISR will finish before returning to main program.
 
     ' If there is no step segment, attempt to pop one from the stepper buffer
-    if (st.exec_segment== NULL) 
+    if (st.exec_segment == NULL) 
         ' Anything in the buffer? If so, load and initialize next step segment.
         if (segment_buffer_head <> segment_buffer_tail) 
             ' Initialize new step segment and load number of steps to execute
-            st.exec_segment:= &segment_buffer[segment_buffer_tail]
+            st.exec_segment := @segment_buffer[segment_buffer_tail]
 
 #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
             ' With AMASS is disabled, set timer prescaler for segments with slow step frequencies (< 250Hz).
-            TCCR1B:= (TCCR1B & !($07<<CS10)) | (st.exec_segment->prescaler<<CS10)
+            TCCR1B := (TCCR1B & !($07<<CS10)) | (st.exec_segment->prescaler<<CS10)
 #endif
 
             ' Initialize step segment timing per step and load number of steps to execute.
-            OCR1A:= st.exec_segment->cycles_per_tick
-            st.step_count:= st.exec_segment->n_step ' NOTE: Can sometimes be zero when moving slow.
+            OCR1A := st.exec_segment->cycles_per_tick
+            st.step_count := st.exec_segment->n_step ' NOTE: Can sometimes be zero when moving slow.
             ' If the new segment starts a new planner block, initialize stepper variables and counters.
             ' NOTE: When the segment data index changes, this indicates a new planner block.
-            if ( st.exec_block_index <> st.exec_segment->st_block_index )    
-                st.exec_block_index:= st.exec_segment->st_block_index
-                st.exec_block:= &st_block_buffer[st.exec_block_index]
+            if (st.exec_block_index <> st.exec_segment->st_block_index)
+                st.exec_block_index := st.exec_segment->st_block_index
+                st.exec_block := @st_block_buffer[st.exec_block_index]
             ' Initialize Bresenham line and distance counters
-                st.counter_x:= st.counter_y = st.counter_z = (st.exec_block->step_event_count >> 1)
-        st.dir_outbits:= st.exec_block->direction_bits ^ dir_port_invert_mask
+                st.counter_x := st.counter_y = st.counter_z = (st.exec_block->step_event_count >> 1)
+        st.dir_outbits := st.exec_block->direction_bits ^ dir_port_invert_mask
 #ifdef ENABLE_DUAL_AXIS
-        st.dir_outbits_dual:= st.exec_block->direction_bits_dual ^ dir_port_invert_mask_dual
+        st.dir_outbits_dual := st.exec_block->direction_bits_dual ^ dir_port_invert_mask_dual
 #endif
 
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
         ' With AMASS enabled, adjust Bresenham axis increment counters according to AMASS level.
-        st.steps[X_AXIS]:= st.exec_block->steps[X_AXIS] >> st.exec_segment->amass_level
-        st.steps[Y_AXIS]:= st.exec_block->steps[Y_AXIS] >> st.exec_segment->amass_level
-        st.steps[Z_AXIS]:= st.exec_block->steps[Z_AXIS] >> st.exec_segment->amass_level
+        st.steps[X_AXIS] := st.exec_block->steps[X_AXIS] >> st.exec_segment->amass_level
+        st.steps[Y_AXIS] := st.exec_block->steps[Y_AXIS] >> st.exec_segment->amass_level
+        st.steps[Z_AXIS] := st.exec_block->steps[Z_AXIS] >> st.exec_segment->amass_level
 #endif
 
 #ifdef VARIABLE_SPINDLE
@@ -401,23 +401,23 @@ ISR(TIMER1_COMPA_vect)
 
         else
       ' Segment buffer empty. Shutdown.
-        st_go_idle
+            st_go_idle
 #ifdef VARIABLE_SPINDLE
-        ' Ensure pwm is set properly upon completion of rate-controlled motion.
-        if (st.exec_block->is_pwm_rate_adjusted) 
-            spindle_set_speed(SPINDLE_PWM_OFF_VALUE) 
+            ' Ensure pwm is set properly upon completion of rate-controlled motion.
+            if (st.exec_block->is_pwm_rate_adjusted) 
+                spindle_set_speed(SPINDLE_PWM_OFF_VALUE) 
 #endif
-      system_set_exec_state_flag(EXEC_CYCLE_STOP) ' Flag main program for cycle end
-      return ' Nothing to do but exit.
+            system_set_exec_state_flag(EXEC_CYCLE_STOP) ' Flag main program for cycle end
+            return ' Nothing to do but exit.
 
     ' Check probing state.
-    if (sys_probe_state== PROBE_ACTIVE) 
-        probe_state_monitor 
+    if (sys_probe_state == PROBE_ACTIVE)
+        probe_state_monitor
 
     ' Reset step out bits.
-    st.step_outbits:= 0
+    st.step_outbits := 0
 #ifdef ENABLE_DUAL_AXIS
-    st.step_outbits_dual:= 0
+    st.step_outbits_dual := 0
 #endif
 
     ' Execute step displacement profile by Bresenham line algorithm
@@ -428,14 +428,14 @@ ISR(TIMER1_COMPA_vect)
 #endif
     if (st.counter_x > st.exec_block->step_event_count)
         st.step_outbits |= (1<<X_STEP_BIT)
-#if defined(ENABLE_DUAL_AXIS) && (DUAL_AXIS_SELECT== X_AXIS)
+#if defined(ENABLE_DUAL_AXIS) AND (DUAL_AXIS_SELECT== X_AXIS)
         st.step_outbits_dual:= (1<<DUAL_STEP_BIT)
 #endif
         st.counter_x -= st.exec_block->step_event_count
-    if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT))
-        sys_position[X_AXIS]--
-    else
-        sys_position[X_AXIS]++ 
+        if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT))
+            sys_position[X_AXIS]--
+        else
+            sys_position[X_AXIS]++ 
 
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     st.counter_y += st.steps[Y_AXIS]
@@ -444,7 +444,7 @@ ISR(TIMER1_COMPA_vect)
 #endif
     if (st.counter_y > st.exec_block->step_event_count)
         st.step_outbits |= (1<<Y_STEP_BIT)
-#if defined(ENABLE_DUAL_AXIS) && (DUAL_AXIS_SELECT== Y_AXIS)
+#if defined(ENABLE_DUAL_AXIS) AND (DUAL_AXIS_SELECT== Y_AXIS)
         st.step_outbits_dual:= (1<<DUAL_STEP_BIT)
 #endif
         st.counter_y -= st.exec_block->step_event_count
@@ -461,13 +461,13 @@ ISR(TIMER1_COMPA_vect)
     if (st.counter_z > st.exec_block->step_event_count)
         st.step_outbits |= (1<<Z_STEP_BIT)
         st.counter_z -= st.exec_block->step_event_count
-    if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT))
-        sys_position[Z_AXIS]--
-    else
-        sys_position[Z_AXIS]++
+        if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT))
+            sys_position[Z_AXIS]--
+        else
+            sys_position[Z_AXIS]++
 
     ' During a homing cycle, lock out and prevent desired axes from moving.
-    if (sys.state== STATE_HOMING)
+    if (sys.state == STATE_HOMING)
         st.step_outbits &= sys.homing_axis_lock
 #ifdef ENABLE_DUAL_AXIS
         st.step_outbits_dual &= sys.homing_axis_lock_dual
@@ -477,14 +477,14 @@ ISR(TIMER1_COMPA_vect)
     if (st.step_count== 0)
         ' Segment is complete. Discard current segment and advance segment indexing.
         st.exec_segment:= NULL
-        if ( ++segment_buffer_tail== SEGMENT_BUFFER_SIZE)
-            segment_buffer_tail:= 0
+        if (++segment_buffer_tail == SEGMENT_BUFFER_SIZE)
+            segment_buffer_tail := 0
 
     st.step_outbits ^= step_port_invert_mask  ' Apply step port invert mask
 #ifdef ENABLE_DUAL_AXIS
     st.step_outbits_dual ^= step_port_invert_mask_dual
 #endif
-    busy:= false
+    busy := false
 
 
 {{ The Stepper Port Reset Interrupt: Timer0 OVF interrupt handles the falling edge of the step
@@ -498,12 +498,12 @@ ISR(TIMER1_COMPA_vect)
 ' This interrupt is enabled by ISR_TIMER1_COMPAREA when it sets the motor port bits to execute
 ' a step. This ISR resets the motor port after a short period (settings.pulse_microseconds)
 ' completing one step cycle.
-ISR(TIMER0_OVF_vect)
+PUB ISR(TIMER0_OVF_vect)
 
     ' Reset stepping pins (leave the direction pins)
-    STEP_PORT:= (STEP_PORT & !STEP_MASK) | (step_port_invert_mask & STEP_MASK)
+    STEP_PORT := (STEP_PORT & !STEP_MASK) | (step_port_invert_mask & STEP_MASK)
 #ifdef ENABLE_DUAL_AXIS
-    STEP_PORT_DUAL:= (STEP_PORT_DUAL & !STEP_MASK_DUAL) | (step_port_invert_mask_dual & STEP_MASK_DUAL)
+    STEP_PORT_DUAL := (STEP_PORT_DUAL & !STEP_MASK_DUAL) | (step_port_invert_mask_dual & STEP_MASK_DUAL)
 #endif
     TCCR0B:= 0 ' Disable Timer0 to prevent re-entering this interrupt when it's not needed.
 
@@ -513,33 +513,33 @@ ISR(TIMER0_OVF_vect)
     ' will then trigger after the appropriate settings.pulse_microseconds, as in normal operation.
     ' The new timing between direction, step pulse, and step complete events are setup in the
     ' st_wake_up routine.
-ISR(TIMER0_COMPA_vect)
+PUB ISR(TIMER0_COMPA_vect)
 
-    STEP_PORT:= st.step_bits ' Begin step pulse.
+    STEP_PORT := st.step_bits ' Begin step pulse.
 #ifdef ENABLE_DUAL_AXIS
-    STEP_PORT_DUAL:= st.step_bits_dual
+    STEP_PORT_DUAL := st.step_bits_dual
 #endif
 #endif
 
 ' Generates the step and direction port invert masks used in the Stepper Interrupt Driver.
-PUB st_generate_step_dir_invert_masks | {byte} idx
+PUB st_generate_step_dir_invert_masks | {uint8_t} idx
 
-    step_port_invert_mask:= 0
-    dir_port_invert_mask:= 0
+    step_port_invert_mask := 0
+    dir_port_invert_mask := 0
     repeat idx from 0 to N_AXIS-1
-        if (bit_istrue(settings.step_invert_mask,bit(idx))) 
+        if (bit_istrue(settings.step_invert_mask, bit(idx))) 
             step_port_invert_mask |= get_step_pin_mask(idx) 
-        if (bit_istrue(settings.dir_invert_mask,bit(idx))) 
+        if (bit_istrue(settings.dir_invert_mask, bit(idx))) 
             dir_port_invert_mask |= get_direction_pin_mask(idx) 
 
 #ifdef ENABLE_DUAL_AXIS
-    step_port_invert_mask_dual:= 0
-    dir_port_invert_mask_dual:= 0
+    step_port_invert_mask_dual := 0
+    dir_port_invert_mask_dual := 0
     ' NOTE: Dual axis invert uses the N_AXIS bit to set step and direction invert pins.    
-    if (bit_istrue(settings.step_invert_mask,bit(N_AXIS))) 
-        step_port_invert_mask_dual:= (1<<DUAL_STEP_BIT) 
-    if (bit_istrue(settings.dir_invert_mask,bit(N_AXIS))) 
-        dir_port_invert_mask_dual:= (1<<DUAL_DIRECTION_BIT) 
+    if (bit_istrue(settings.step_invert_mask, bit(N_AXIS))) 
+        step_port_invert_mask_dual := (1<<DUAL_STEP_BIT) 
+    if (bit_istrue(settings.dir_invert_mask, bit(N_AXIS))) 
+        dir_port_invert_mask_dual := (1<<DUAL_DIRECTION_BIT) 
 #endif
 
 ' Reset and clear stepper subsystem variables
@@ -551,24 +551,24 @@ PUB st_reset
     ' Initialize stepper algorithm variables.
     bytefill(@prep, 0, {sizeof}st_prep_t)
     bytefill(@st, 0, {sizeof}stepper_t)
-    st.exec_segment:= NULL
-    pl_block:= NULL  ' Planner block pointer used by segment buffer
-    segment_buffer_tail:= 0
-    segment_buffer_head:= 0 ' empty = tail
-    segment_next_head:= 1
-    busy:= false
+    st.exec_segment := NULL
+    pl_block := NULL  ' Planner block pointer used by segment buffer
+    segment_buffer_tail := 0
+    segment_buffer_head := 0 ' empty = tail
+    segment_next_head := 1
+    busy := false
 
     st_generate_step_dir_invert_masks
-    st.dir_outbits:= dir_port_invert_mask ' Initialize direction bits to default.
+    st.dir_outbits := dir_port_invert_mask ' Initialize direction bits to default.
 
     ' Initialize step and direction port pins.
-    STEP_PORT:= (STEP_PORT & !STEP_MASK) | step_port_invert_mask
-    DIRECTION_PORT:= (DIRECTION_PORT & !DIRECTION_MASK) | dir_port_invert_mask
+    STEP_PORT := (STEP_PORT & !STEP_MASK) | step_port_invert_mask
+    DIRECTION_PORT := (DIRECTION_PORT & !DIRECTION_MASK) | dir_port_invert_mask
 
 #ifdef ENABLE_DUAL_AXIS
-    st.dir_outbits_dual:= dir_port_invert_mask_dual
-    STEP_PORT_DUAL:= (STEP_PORT_DUAL & !STEP_MASK_DUAL) | step_port_invert_mask_dual
-    DIRECTION_PORT_DUAL:= (DIRECTION_PORT_DUAL & !DIRECTION_MASK_DUAL) | dir_port_invert_mask_dual
+    st.dir_outbits_dual := dir_port_invert_mask_dual
+    STEP_PORT_DUAL := (STEP_PORT_DUAL & !STEP_MASK_DUAL) | step_port_invert_mask_dual
+    DIRECTION_PORT_DUAL := (DIRECTION_PORT_DUAL & !DIRECTION_MASK_DUAL) | dir_port_invert_mask_dual
 #endif
 
 ' Initialize and start the stepper motor subsystem
@@ -594,8 +594,8 @@ PUB stepper_init
 
     ' Configure Timer 0: Stepper Port Reset Interrupt
     TIMSK0 &= !((1<<OCIE0B) | (1<<OCIE0A) | (1<<TOIE0)) ' Disconnect OC0 outputs and OVF interrupt.
-    TCCR0A:= 0 ' Normal operation
-    TCCR0B:= 0 ' Disable Timer0 until needed
+    TCCR0A := 0 ' Normal operation
+    TCCR0B := 0 ' Disable Timer0 until needed
     TIMSK0 |= (1<<TOIE0) ' Enable Timer0 overflow interrupt
 #ifdef STEP_PULSE_DELAY
     TIMSK0 |= (1<<OCIE0A) ' Enable Timer0 Compare Match A interrupt
@@ -607,48 +607,48 @@ PUB st_update_plan_block_parameters
     if (pl_block <> NULL) 
         ' Ignore if at start of a new block.
         prep.recalculate_flag |= PREP_FLAG_RECALCULATE
-        pl_block->entry_speed_sqr:= prep.current_speed*prep.current_speed ' Update entry speed.
-        pl_block:= NULL ' Flag st_prep_segment to load and check active velocity profile.
+        pl_block->entry_speed_sqr := prep.current_speed*prep.current_speed ' Update entry speed.
+        pl_block := NULL ' Flag st_prep_segment to load and check active velocity profile.
 
 ' Increments the step segment buffer block data ring buffer.
-PUB {static byte} st_next_block_index({uint8_t} block_index)
+PUB {static uint8_t} st_next_block_index({uint8_t} block_index)
 
     block_index++
-    if ( block_index== (SEGMENT_BUFFER_SIZE-1) )
+    if (block_index == (SEGMENT_BUFFER_SIZE-1))
         return(0) 
     return(block_index)
 
 #ifdef PARKING_ENABLE
     ' Changes the run state of the step segment buffer to execute the special parking motion.
-PUB{void} st_parking_setup_buffer
+PUB st_parking_setup_buffer
 
     ' Store step execution data of partially completed block, if necessary.
     if (prep.recalculate_flag & PREP_FLAG_HOLD_PARTIAL_BLOCK) 
-        prep.last_st_block_index:= prep.st_block_index
-        prep.last_steps_remaining:= prep.steps_remaining
-        prep.last_dt_remainder:= prep.dt_remainder
-        prep.last_step_per_mm:= prep.step_per_mm
+        prep.last_st_block_index := prep.st_block_index
+        prep.last_steps_remaining := prep.steps_remaining
+        prep.last_dt_remainder := prep.dt_remainder
+        prep.last_step_per_mm := prep.step_per_mm
     
     ' Set flags to execute a parking motion
     prep.recalculate_flag |= PREP_FLAG_PARKING
     prep.recalculate_flag &= !(PREP_FLAG_RECALCULATE)
-    pl_block:= NULL ' Always reset parking motion to reload new block.
+    pl_block := NULL ' Always reset parking motion to reload new block.
 
   ' Restores the step segment buffer to the normal run state after a parking motion.
-PUB{void} st_parking_restore_buffer
+PUB st_parking_restore_buffer
 
     ' Restore step execution data and flags of partially completed block, if necessary.
     if (prep.recalculate_flag & PREP_FLAG_HOLD_PARTIAL_BLOCK) 
-        st_prep_block:= &st_block_buffer[prep.last_st_block_index]
-        prep.st_block_index:= prep.last_st_block_index
-        prep.steps_remaining:= prep.last_steps_remaining
-        prep.dt_remainder:= prep.last_dt_remainder
-        prep.step_per_mm:= prep.last_step_per_mm
-        prep.recalculate_flag:= (PREP_FLAG_HOLD_PARTIAL_BLOCK | PREP_FLAG_RECALCULATE)
-        prep.req_mm_increment:= REQ_MM_INCREMENT_SCALAR/prep.step_per_mm ' Recompute this value.
+        st_prep_block := @st_block_buffer[prep.last_st_block_index]
+        prep.st_block_index := prep.last_st_block_index
+        prep.steps_remaining := prep.last_steps_remaining
+        prep.dt_remainder := prep.last_dt_remainder
+        prep.step_per_mm := prep.last_step_per_mm
+        prep.recalculate_flag := (PREP_FLAG_HOLD_PARTIAL_BLOCK | PREP_FLAG_RECALCULATE)
+        prep.req_mm_increment := REQ_MM_INCREMENT_SCALAR/prep.step_per_mm ' Recompute this value.
     else 
-        prep.recalculate_flag:= false
-    pl_block:= NULL ' Set to reload next block.
+        prep.recalculate_flag := false
+    pl_block := NULL ' Set to reload next block.
 #endif
 
 
@@ -665,35 +665,35 @@ PUB{void} st_parking_restore_buffer
    Currently, the segment buffer conservatively holds roughly up to 40-50 msec of steps.
    NOTE: Computation units are in steps, millimeters, and minutes.
 }}
-PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_2_accel, {float} decel_dist, {float} exit_speed_sqr, nominal_speed, nominal_speed_sqr, intersect_distance, {segment_t *} prep_segment, {float} dt_max, dt, time_var, mm_var, speed_var, mm_remaining, minimum_mm, rpm, step_dist_remaining, n_steps_remaining, last_n_steps_remaining, inv_rate, {uint32_t} cycles
+PUB st_prep_buffer | {uint8_t}idx, {float pl_block->step_event_count}, {float} inv_2_accel, {float} decel_dist, {float} exit_speed_sqr, nominal_speed, nominal_speed_sqr, intersect_distance, {segment_t *} prep_segment, {float} dt_max, dt, time_var, mm_var, speed_var, mm_remaining, minimum_mm, rpm, step_dist_remaining, n_steps_remaining, last_n_steps_remaining, inv_rate, {uint32_t} cycles
 'YYY
     ' Block step prep buffer, repeat while in a suspend state and there is no suspend motion to execute.
-    if (bit_istrue(sys.step_control,STEP_CONTROL_END_MOTION)) 
+    if (bit_istrue(sys.step_control, STEP_CONTROL_END_MOTION)) 
         return 
     repeat while (segment_buffer_tail <> segment_next_head)
         ' Check if we need to fill the buffer.
 
     ' Determine if we need to load a new planner block or if the block needs to be recomputed.
-        if (pl_block== NULL) 
+        if (pl_block == NULL)
 
         ' Query planner for a queued block
             if (sys.step_control & STEP_CONTROL_EXECUTE_SYS_MOTION) 
-                pl_block:= plan_get_system_motion_block 
+                pl_block := plan_get_system_motion_block 
             else 
-                pl_block:= plan_get_current_block 
-            if (pl_block== NULL) 
+                pl_block := plan_get_current_block 
+            if (pl_block == NULL) 
                 return  ' No planner blocks. Exit.
 
           ' Check if we need to only recompute the velocity profile or load a new block.
             if (prep.recalculate_flag & PREP_FLAG_RECALCULATE) 
 
 #ifdef PARKING_ENABLE
-            if (prep.recalculate_flag & PREP_FLAG_PARKING) 
-                prep.recalculate_flag &= !(PREP_FLAG_RECALCULATE) 
-            else 
-                prep.recalculate_flag:= false 
+                if (prep.recalculate_flag & PREP_FLAG_PARKING) 
+                    prep.recalculate_flag &= !(PREP_FLAG_RECALCULATE) 
+                else 
+                    prep.recalculate_flag := false
 #else
-                prep.recalculate_flag:= false
+                    prep.recalculate_flag := false
 #endif
             else
                 ' Load the Bresenham stepping data for the block.
@@ -702,18 +702,17 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
                 ' Prepare and copy Bresenham algorithm segment data from the new planner block, so that
                 ' when the segment buffer completes the planner block, it may be discarded when the
                 ' segment buffer finishes the prepped block, but the stepper ISR is still executing it.
-                st_prep_block:= &st_block_buffer[prep.st_block_index]
-                st_prep_block->direction_bits:= pl_block->direction_bits
+                st_prep_block := @st_block_buffer[prep.st_block_index]
+                st_prep_block->direction_bits := pl_block->direction_bits
 #ifdef ENABLE_DUAL_AXIS
-#if (DUAL_AXIS_SELECT== X_AXIS)
+#if (DUAL_AXIS_SELECT == X_AXIS)
                 if (st_prep_block->direction_bits & (1<<X_DIRECTION_BIT)) 
-#elif (DUAL_AXIS_SELECT== Y_AXIS)
+#elif (DUAL_AXIS_SELECT == Y_AXIS)
                 if (st_prep_block->direction_bits & (1<<Y_DIRECTION_BIT)) 
-
 #endif
-                    st_prep_block->direction_bits_dual:= (1<<DUAL_DIRECTION_BIT)
+                    st_prep_block->direction_bits_dual := (1<<DUAL_DIRECTION_BIT)
                 else
-                    st_prep_block->direction_bits_dual:= 0 
+                    st_prep_block->direction_bits_dual := 0 
 #endif
 #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
                 repeat idx from 0 to N_AXIS-1
@@ -724,34 +723,34 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
               ' level, such that we never divide beyond the original data anywhere in the algorithm.
               ' If the original data is divided, we can lose a step from integer roundoff.
                 repeat idx from 0 to N_AXIS-1
-                    st_prep_block->steps[idx]:= pl_block->steps[idx] << MAX_AMASS_LEVEL 
-                st_prep_block->step_event_count:= pl_block->step_event_count << MAX_AMASS_LEVEL
+                    st_prep_block->steps[idx] := pl_block->steps[idx] << MAX_AMASS_LEVEL 
+                st_prep_block->step_event_count := pl_block->step_event_count << MAX_AMASS_LEVEL
 #endif
 
             ' Initialize segment buffer data for generating the segments.
-                prep.steps_remaining:= (float)pl_block->step_event_count 'XXX
-                prep.step_per_mm:= prep.steps_remaining/pl_block->millimeters
-                prep.req_mm_increment:= REQ_MM_INCREMENT_SCALAR/prep.step_per_mm
-                prep.dt_remainder:= 0.0 ' Reset for new segment block
+                prep.steps_remaining := {float}pl_block->step_event_count 'XXX
+                prep.step_per_mm := prep.steps_remaining/pl_block->millimeters
+                prep.req_mm_increment := REQ_MM_INCREMENT_SCALAR/prep.step_per_mm
+                prep.dt_remainder := 0.0 ' Reset for new segment block
 
-                if ((sys.step_control & STEP_CONTROL_EXECUTE_HOLD) || (prep.recalculate_flag & PREP_FLAG_DECEL_OVERRIDE))
+                if ((sys.step_control & STEP_CONTROL_EXECUTE_HOLD) OR (prep.recalculate_flag & PREP_FLAG_DECEL_OVERRIDE))
 
                     ' New block loaded mid-hold. Override planner block entry speed to enforce deceleration.
-                    prep.current_speed:= prep.exit_speed
-                    pl_block->entry_speed_sqr:= prep.exit_speed*prep.exit_speed
+                    prep.current_speed := prep.exit_speed
+                    pl_block->entry_speed_sqr := prep.exit_speed*prep.exit_speed
                     prep.recalculate_flag &= !(PREP_FLAG_DECEL_OVERRIDE)
                 else
-                    prep.current_speed:= sqrt(pl_block->entry_speed_sqr)
+                    prep.current_speed := sqrt(pl_block->entry_speed_sqr)
 
 #ifdef VARIABLE_SPINDLE
                 ' Setup laser mode variables. PWM rate adjusted motions will always complete a motion with the
                 ' spindle off. 
-                st_prep_block->is_pwm_rate_adjusted:= false
+                st_prep_block->is_pwm_rate_adjusted := false
                 if (settings.flags & BITFLAG_LASER_MODE)
                     if (pl_block->condition & PL_COND_FLAG_SPINDLE_CCW)
                         ' Pre-compute inverse programmed rate to speed up PWM updating per step segment.
-                        prep.inv_rate:= 1.0/pl_block->programmed_rate
-                        st_prep_block->is_pwm_rate_adjusted:= true 
+                        prep.inv_rate := 1.0/pl_block->programmed_rate
+                        st_prep_block->is_pwm_rate_adjusted := true 
 #endif
 
             {{ ---------------------------------------------------------------------------------
@@ -760,46 +759,46 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
     			 planner has updated it. For a commanded forced-deceleration, such as from a feed
     			 hold, override the planner velocities and decelerate to the target exit speed.
     		}}
-    		prep.mm_complete:= 0.0 ' Default velocity profile complete at 0.0mm from end of block.
-    		inv_2_accel:= 0.5/pl_block->acceleration
+    		prep.mm_complete := 0.0 ' Default velocity profile complete at 0.0mm from end of block.
+    		inv_2_accel := 0.5/pl_block->acceleration
     		if (sys.step_control & STEP_CONTROL_EXECUTE_HOLD)
                 ' [Forced Deceleration to Zero Velocity]
     			' Compute velocity profile parameters for a feed hold in-progress. This profile overrides
     			' the planner block profile, enforcing a deceleration to zero speed.
-    			prep.ramp_type:= RAMP_DECEL
+    			prep.ramp_type := RAMP_DECEL
     			' Compute decelerate distance relative to end of block.
-    			decel_dist:= pl_block->millimeters - inv_2_accel*pl_block->entry_speed_sqr
+    			decel_dist := pl_block->millimeters - inv_2_accel*pl_block->entry_speed_sqr
 
     			if (decel_dist < 0.0)
     				' Deceleration through entire planner block. End of feed hold is not in this block.
-    				prep.exit_speed:= sqrt(pl_block->entry_speed_sqr-2*pl_block->acceleration*pl_block->millimeters)
+    				prep.exit_speed := sqrt(pl_block->entry_speed_sqr-2*pl_block->acceleration*pl_block->millimeters)
     			else
-    				prep.mm_complete:= decel_dist ' End of feed hold.
-    				prep.exit_speed:= 0.0
-    		else 
+    				prep.mm_complete := decel_dist ' End of feed hold.
+    				prep.exit_speed := 0.0
+    		else
                 ' [Normal Operation]
     			' Compute or recompute velocity profile parameters of the prepped planner block.
-    			prep.ramp_type:= RAMP_ACCEL ' Initialize as acceleration ramp.
-    			prep.accelerate_until:= pl_block->millimeters
+    			prep.ramp_type := RAMP_ACCEL ' Initialize as acceleration ramp.
+    			prep.accelerate_until := pl_block->millimeters
 
                 if (sys.step_control & STEP_CONTROL_EXECUTE_SYS_MOTION)
-                    prep.exit_speed:= exit_speed_sqr = 0.0 ' Enforce stop at end of system motion.
+                    prep.exit_speed := exit_speed_sqr = 0.0 ' Enforce stop at end of system motion.
                 else
-                    exit_speed_sqr:= plan_get_exec_block_exit_speed_sqr
-                    prep.exit_speed:= sqrt(exit_speed_sqr)
-                nominal_speed:= plan_compute_profile_nominal_speed(pl_block)
-    			nominal_speed_sqr:= nominal_speed*nominal_speed
-    		    intersect_distance:=0.5*(pl_block->millimeters+inv_2_accel*(pl_block->entry_speed_sqr-exit_speed_sqr))
+                    exit_speed_sqr := plan_get_exec_block_exit_speed_sqr
+                    prep.exit_speed := sqrt(exit_speed_sqr)
+                nominal_speed := plan_compute_profile_nominal_speed(pl_block)
+    			nominal_speed_sqr := nominal_speed*nominal_speed
+    		    intersect_distance := 0.5*(pl_block->millimeters+inv_2_accel*(pl_block->entry_speed_sqr-exit_speed_sqr))
                 if (pl_block->entry_speed_sqr > nominal_speed_sqr) ' Only occurs during override reductions.
-                    prep.accelerate_until:= pl_block->millimeters - inv_2_accel*(pl_block->entry_speed_sqr-nominal_speed_sqr)
+                    prep.accelerate_until := pl_block->millimeters - inv_2_accel*(pl_block->entry_speed_sqr-nominal_speed_sqr)
                     if (prep.accelerate_until =< 0.0) 
                         ' Deceleration-only.
-                        prep.ramp_type:= RAMP_DECEL
+                        prep.ramp_type := RAMP_DECEL
                         ' prep.decelerate_after:= pl_block->millimeters
                         ' prep.maximum_speed:= prep.current_speed
 
                         ' Compute override block exit speed since it doesn't match the planner exit speed.
-                        prep.exit_speed:= sqrt(pl_block->entry_speed_sqr - 2*pl_block->acceleration*pl_block->millimeters)
+                        prep.exit_speed := sqrt(pl_block->entry_speed_sqr - 2*pl_block->acceleration*pl_block->millimeters)
                         prep.recalculate_flag |= PREP_FLAG_DECEL_OVERRIDE ' Flag to load next block as deceleration override.
 
                         ' TODO: Determine correct handling of parameters in deceleration-only.
@@ -807,38 +806,34 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
                         ' Also, look into near-zero speed handling issues with this.
                     else 
                         ' Decelerate to cruise or cruise-decelerate types. Guaranteed to intersect updated plan.
-                        prep.decelerate_after:= inv_2_accel*(nominal_speed_sqr-exit_speed_sqr) ' Should always be => 0.0 due to planner reinit.
-                        prep.maximum_speed:= nominal_speed
-                        prep.ramp_type:= RAMP_DECEL_OVERRIDE
+                        prep.decelerate_after := inv_2_accel*(nominal_speed_sqr-exit_speed_sqr) ' Should always be => 0.0 due to planner reinit.
+                        prep.maximum_speed := nominal_speed
+                        prep.ramp_type := RAMP_DECEL_OVERRIDE
     				elseif (intersect_distance > 0.0) 
     				    if (intersect_distance < pl_block->millimeters) 
                             ' Either trapezoid or triangle types
     						' NOTE: For acceleration-cruise and cruise-only types, following calculation will be 0.0.
-    						prep.decelerate_after:= inv_2_accel*(nominal_speed_sqr-exit_speed_sqr)
-    						if (prep.decelerate_after < intersect_distance) 
-                                ' Trapezoid type
-    							prep.maximum_speed:= nominal_speed
-    							if (pl_block->entry_speed_sqr== nominal_speed_sqr) 
+    						prep.decelerate_after := inv_2_accel*(nominal_speed_sqr-exit_speed_sqr)
+    						if (prep.decelerate_after < intersect_distance) ' Trapezoid type
+    							prep.maximum_speed := nominal_speed
+    							if (pl_block->entry_speed_sqr == nominal_speed_sqr) 
     								' Cruise-deceleration or cruise-only type.
-    								prep.ramp_type:= RAMP_CRUISE
+    								prep.ramp_type := RAMP_CRUISE
     							else 
     								' Full-trapezoid or acceleration-cruise types
     								prep.accelerate_until -= inv_2_accel*(nominal_speed_sqr-pl_block->entry_speed_sqr)
-    						else 
-                                ' Triangle type
-    							prep.accelerate_until:= intersect_distance
-    							prep.decelerate_after:= intersect_distance
-    							prep.maximum_speed:= sqrt(2.0*pl_block->acceleration*intersect_distance+exit_speed_sqr)
-    					else 
-                            ' Deceleration-only type
-                            prep.ramp_type:= RAMP_DECEL
+    						else    ' Triangle type
+    							prep.accelerate_until := intersect_distance
+    							prep.decelerate_after := intersect_distance
+    							prep.maximum_speed := sqrt(2.0*pl_block->acceleration*intersect_distance+exit_speed_sqr)
+    					else ' Deceleration-only type
+                            prep.ramp_type := RAMP_DECEL
                             ' prep.decelerate_after:= pl_block->millimeters
                             ' prep.maximum_speed:= prep.current_speed
-    				else 
-                        ' Acceleration-only type
-    					prep.accelerate_until:= 0.0
+    				else ' Acceleration-only type
+    					prep.accelerate_until := 0.0
     					' prep.decelerate_after:= 0.0
-    					prep.maximum_speed:= prep.exit_speed
+    					prep.maximum_speed := prep.exit_speed
 'indent level 2
       
 #ifdef VARIABLE_SPINDLE
@@ -846,10 +841,10 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
 #endif
     
         ' Initialize new segment
-        {segment_t *}prep_segment:= @segment_buffer[segment_buffer_head]
+        {segment_t *}prep_segment := @segment_buffer[segment_buffer_head]
 
         ' Set new segment to point to the current segment data block.
-        prep_segment->st_block_index:= prep.st_block_index  'XXX
+        prep_segment->st_block_index := prep.st_block_index  'XXX
 
         {{------------------------------------------------------------------------------------
             Compute the average velocity of this new segment by determining the total distance
@@ -865,80 +860,80 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
         the end of planner block (typical) or mid-block at the end of a forced deceleration,
         such as from a feed hold.
         }}
-        dt_max:= DT_SEGMENT ' Maximum segment time
-        dt:= 0.0 ' Initialize segment time
-        time_var:= dt_max ' Time worker variable
+        dt_max := DT_SEGMENT ' Maximum segment time
+        dt := 0.0 ' Initialize segment time
+        time_var := dt_max ' Time worker variable
         'mm_var ' mm-Distance worker variable
         'speed_var ' Speed worker variable
-        mm_remaining:= pl_block->millimeters ' New segment distance from end of block. 'XXX
-        minimum_mm:= mm_remaining-prep.req_mm_increment ' Guarantee at least one step. 'XXX
+        mm_remaining := pl_block->millimeters ' New segment distance from end of block. 'XXX
+        minimum_mm := mm_remaining-prep.req_mm_increment ' Guarantee at least one step. 'XXX
         if (minimum_mm < 0.0)
-            minimum_mm:= 0.0
+            minimum_mm := 0.0
         repeat
             case (prep.ramp_type) 
                 RAMP_DECEL_OVERRIDE:
-                    speed_var:= pl_block->acceleration*time_var
+                    speed_var := pl_block->acceleration*time_var
                     if (prep.current_speed-prep.maximum_speed =< speed_var) 
                     ' Cruise or cruise-deceleration types only for deceleration override.
-                        mm_remaining:= prep.accelerate_until
-                        time_var:= 2.0*(pl_block->millimeters-mm_remaining)/(prep.current_speed+prep.maximum_speed)
-                        prep.ramp_type:= RAMP_CRUISE
-                        prep.current_speed:= prep.maximum_speed
+                        mm_remaining := prep.accelerate_until
+                        time_var := 2.0*(pl_block->millimeters-mm_remaining)/(prep.current_speed+prep.maximum_speed)
+                        prep.ramp_type := RAMP_CRUISE
+                        prep.current_speed := prep.maximum_speed
                     else
                         ' Mid-deceleration override ramp.
                         mm_remaining -= time_var*(prep.current_speed - 0.5*speed_var)
                         prep.current_speed -= speed_var
                 RAMP_ACCEL:
                     ' NOTE: Acceleration ramp only computes during first do-repeat while loop.
-                    speed_var:= pl_block->acceleration*time_var
+                    speed_var := pl_block->acceleration*time_var
                     mm_remaining -= time_var*(prep.current_speed + 0.5*speed_var)
                     if (mm_remaining < prep.accelerate_until) ' End of acceleration ramp.
                         ' Acceleration-cruise, acceleration-deceleration ramp junction, or end of block.
-                        mm_remaining:= prep.accelerate_until ' NOTE: 0.0 at EOB
-                        time_var:= 2.0*(pl_block->millimeters-mm_remaining)/(prep.current_speed+prep.maximum_speed)
-                        if (mm_remaining== prep.decelerate_after)
+                        mm_remaining := prep.accelerate_until ' NOTE: 0.0 at EOB
+                        time_var := 2.0*(pl_block->millimeters-mm_remaining)/(prep.current_speed+prep.maximum_speed)
+                        if (mm_remaining == prep.decelerate_after)
                             prep.ramp_type:= RAMP_DECEL 
                         else
                             prep.ramp_type:= RAMP_CRUISE 
-                        prep.current_speed:= prep.maximum_speed
+                        prep.current_speed := prep.maximum_speed
                     else    ' Acceleration only.
                         prep.current_speed += speed_var
                 RAMP_CRUISE:
                     ' NOTE: mm_var used to retain the last mm_remaining for incomplete segment time_var calculations.
                     ' NOTE: If maximum_speed*time_var value is too low, round-off can cause mm_var to not change. To
                     '   prevent this, simply enforce a minimum speed threshold in the planner.
-                    mm_var:= mm_remaining - prep.maximum_speed*time_var
+                    mm_var := mm_remaining - prep.maximum_speed*time_var
                     if (mm_var < prep.decelerate_after) ' End of cruise.
                         ' Cruise-deceleration junction or end of block.
-                        time_var:= (mm_remaining - prep.decelerate_after)/prep.maximum_speed
-                        mm_remaining:= prep.decelerate_after ' NOTE: 0.0 at EOB
-                        prep.ramp_type:= RAMP_DECEL
+                        time_var := (mm_remaining - prep.decelerate_after)/prep.maximum_speed
+                        mm_remaining := prep.decelerate_after ' NOTE: 0.0 at EOB
+                        prep.ramp_type := RAMP_DECEL
                     else ' Cruising only.
                         mm_remaining:= mm_var
             OTHER: ' RAMP_DECEL:
                 ' NOTE: mm_var used as a misc worker variable to prevent errors when near zero speed.
-                speed_var:= pl_block->acceleration*time_var ' Used as delta speed (mm/min)
+                speed_var := pl_block->acceleration*time_var ' Used as delta speed (mm/min)
                 if (prep.current_speed > speed_var) ' Check if at or below zero speed.
                     ' Compute distance from end of segment to end of block.
-                    mm_var:= mm_remaining - time_var*(prep.current_speed - 0.5*speed_var) ' (mm)
+                    mm_var := mm_remaining - time_var*(prep.current_speed - 0.5*speed_var) ' (mm)
                     if (mm_var > prep.mm_complete) ' Typical case. In deceleration ramp.
-                        mm_remaining:= mm_var
+                        mm_remaining := mm_var
                         prep.current_speed -= speed_var
                         ' Segment complete. Exit case-statement. Continue do-repeat while loop.
                 ' Otherwise, at end of block or end of forced-deceleration.
-                time_var:= 2.0*(mm_remaining-prep.mm_complete)/(prep.current_speed+prep.exit_speed)
-                mm_remaining:= prep.mm_complete
-                prep.current_speed:= prep.exit_speed
+                time_var := 2.0*(mm_remaining-prep.mm_complete)/(prep.current_speed+prep.exit_speed)
+                mm_remaining := prep.mm_complete
+                prep.current_speed := prep.exit_speed
         dt += time_var ' Add computed ramp time to total segment time.
-        if (dt < dt_max) 
-            time_var:= dt_max - dt  ' **Incomplete** At ramp junction.
-        else 
-            if (mm_remaining > minimum_mm) 
+        if (dt < dt_max)
+            time_var := dt_max - dt  ' **Incomplete** At ramp junction.
+        else
+            if (mm_remaining > minimum_mm)
                 ' Check for very slow segments with zero steps.
                 ' Increase segment time to ensure at least one step in segment. Override and loop
                 ' through distance calculations until minimum_mm or mm_complete.
                 dt_max += DT_SEGMENT
-                time_var:= dt_max - dt
+                time_var := dt_max - dt
             else 
                 ' **Complete** Exit loop. Segment execution time maxed.
         while (mm_remaining > prep.mm_complete) ' **Complete** Exit loop. Profile complete.
@@ -947,20 +942,20 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
         {{ -----------------------------------------------------------------------------------
             Compute spindle speed PWM output for step segment
         }}
-        if (st_prep_block->is_pwm_rate_adjusted || (sys.step_control & STEP_CONTROL_UPDATE_SPINDLE_PWM)) 
+        if (st_prep_block->is_pwm_rate_adjusted OR (sys.step_control & STEP_CONTROL_UPDATE_SPINDLE_PWM)) 
             if (pl_block->condition & (PL_COND_FLAG_SPINDLE_CW | PL_COND_FLAG_SPINDLE_CCW)) 
-                {float} rpm:= pl_block->spindle_speed
+                {float} rpm := pl_block->spindle_speed
                 ' NOTE: Feed and rapid overrides are independent of PWM value and do not alter laser power/rate. 
                 if (st_prep_block->is_pwm_rate_adjusted) 
                     rpm *= (prep.current_speed * prep.inv_rate)
                     ' If current_speed is zero, then may need to be rpm_min*(100/MAX_SPINDLE_SPEED_OVERRIDE)
                     ' but this would be instantaneous only and during a motion. May not matter at all.
-                    prep.current_spindle_pwm:= spindle_compute_pwm_value(rpm)
+                    prep.current_spindle_pwm := spindle_compute_pwm_value(rpm)
                 else 
-                    sys.spindle_speed:= 0.0
-                    prep.current_spindle_pwm:= SPINDLE_PWM_OFF_VALUE
+                    sys.spindle_speed := 0.0
+                    prep.current_spindle_pwm := SPINDLE_PWM_OFF_VALUE
                 bit_false(sys.step_control,STEP_CONTROL_UPDATE_SPINDLE_PWM)
-        prep_segment->spindle_pwm:= prep.current_spindle_pwm ' Reload segment PWM value
+        prep_segment->spindle_pwm := prep.current_spindle_pwm ' Reload segment PWM value
 
 #endif
     
@@ -974,19 +969,19 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
             Fortunately, this scenario is highly unlikely and unrealistic in CNC machines
             supported by Grbl (i.e. exceeding 10 meters axis travel at 200 step/mm).
         }}
-        step_dist_remaining:= prep.step_per_mm*mm_remaining ' Convert mm_remaining to steps 'XXX
-        n_steps_remaining:= ceil(step_dist_remaining) ' Round-up current steps remaining
-        last_n_steps_remaining:= ceil(prep.steps_remaining) ' Round-up last steps remaining
-        prep_segment->n_step:= last_n_steps_remaining-n_steps_remaining ' Compute number of steps to execute. 'XX
+        step_dist_remaining := prep.step_per_mm*mm_remaining ' Convert mm_remaining to steps 'XXX
+        n_steps_remaining := ceil(step_dist_remaining) ' Round-up current steps remaining
+        last_n_steps_remaining := ceil(prep.steps_remaining) ' Round-up last steps remaining
+        prep_segment->n_step := last_n_steps_remaining-n_steps_remaining ' Compute number of steps to execute. 'XX
 
         ' Bail if we are at the end of a feed hold and don't have a step to execute.
-        if (prep_segment->n_step== 0)   'XXX
+        if (prep_segment->n_step == 0)   'XXX
             if (sys.step_control & STEP_CONTROL_EXECUTE_HOLD)
                 ' Less than one step to decelerate to zero speed, but already very close. AMASS
                 ' requires full steps to execute. So, just bail.
-                bit_true(sys.step_control,STEP_CONTROL_END_MOTION)
+                bit_true(sys.step_control, STEP_CONTROL_END_MOTION)
 #ifdef PARKING_ENABLE
-                if (!(prep.recalculate_flag & PREP_FLAG_PARKING))
+                if (NOT(prep.recalculate_flag & PREP_FLAG_PARKING))
                     prep.recalculate_flag |= PREP_FLAG_HOLD_PARTIAL_BLOCK
 #endif
                 return ' Segment not generated, but current step data still retained.
@@ -1000,79 +995,78 @@ PUB st_prep_buffer | {byte}idx, {float pl_block->step_event_count}, {float} inv_
         ' typically very small and do not adversely effect performance, but ensures that Grbl
         ' outputs the exact acceleration and velocity profiles as computed by the planner.
         dt += prep.dt_remainder ' Apply previous segment partial step execute time
-        inv_rate:= dt/(last_n_steps_remaining - step_dist_remaining) ' Compute adjusted step rate inverse
+        inv_rate := dt/(last_n_steps_remaining - step_dist_remaining) ' Compute adjusted step rate inverse
 
         ' Compute CPU cycles per step for the prepped segment.
-        cycles:= ceil( (TICKS_PER_MICROSECOND*1000000*60)*inv_rate ) ' (cycles/step)
+        cycles := ceil( (TICKS_PER_MICROSECOND*1000000*60)*inv_rate ) ' (cycles/step)
 
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
         ' Compute step timing and multi-axis smoothing level.
         ' NOTE: AMASS overdrives the timer with each level, so only one prescalar is required.
         if (cycles < AMASS_LEVEL1) 
-            prep_segment->amass_level:= 0 
+            prep_segment->amass_level := 0 
         else 
             if (cycles < AMASS_LEVEL2) 
-                prep_segment->amass_level:= 1 
+                prep_segment->amass_level := 1 
             elseif (cycles < AMASS_LEVEL3) 
-                prep_segment->amass_level:= 2 
+                prep_segment->amass_level := 2 
             else 
                 prep_segment->amass_level:= 3 
                 cycles >=> prep_segment->amass_level
                 prep_segment->n_step <=< prep_segment->amass_level
         if (cycles < (1{UL} << 16))
-            prep_segment->cycles_per_tick:= cycles  ' < 65536 (4.1ms @ 16MHz)
+            prep_segment->cycles_per_tick := cycles  ' < 65536 (4.1ms @ 16MHz)
         else
             prep_segment->cycles_per_tick:= $ffff  ' Just set the slowest speed possible.
 #else
         ' Compute step timing and timer prescalar for normal step generation.
-        if (cycles < (1UL << 16)) 
+        if (cycles < (1UL << 16))
         ' < 65536  (4.1ms @ 16MHz)
-            prep_segment->prescaler:= 1 ' prescaler: 0
-            prep_segment->cycles_per_tick:= cycles
-        elseif (cycles < (1UL << 19)) 
+            prep_segment->prescaler := 1 ' prescaler: 0
+            prep_segment->cycles_per_tick := cycles
+        elseif (cycles < (1UL << 19))
             ' < 524288 (32.8ms@16MHz)
-            prep_segment->prescaler:= 2 ' prescaler: 8
-            prep_segment->cycles_per_tick:= cycles >> 3
+            prep_segment->prescaler := 2 ' prescaler: 8
+            prep_segment->cycles_per_tick := cycles >> 3
         else 
-            prep_segment->prescaler:= 3 ' prescaler: 64
+            prep_segment->prescaler := 3 ' prescaler: 64
             if (cycles < (1UL << 22)) 
             ' < 4194304 (262ms@16MHz)
-                prep_segment->cycles_per_tick:=  cycles >> 6
+                prep_segment->cycles_per_tick :=  cycles >> 6
             else ' Just set the slowest speed possible. (Around 4 step/sec.)
-                prep_segment->cycles_per_tick:= $ffff
+                prep_segment->cycles_per_tick := $ffff
 #endif
 
         ' Segment complete! Increment segment buffer indices, so stepper ISR can immediately execute it.
-        segment_buffer_head:= segment_next_head
-        if ( ++segment_next_head== SEGMENT_BUFFER_SIZE ) 
-            segment_next_head:= 0 
+        segment_buffer_head := segment_next_head
+        if (++segment_next_head == SEGMENT_BUFFER_SIZE)
+            segment_next_head := 0 
 
         ' Update the appropriate planner and segment data.
-        pl_block->millimeters:= mm_remaining
-        prep.steps_remaining:= n_steps_remaining
-        prep.dt_remainder:= (n_steps_remaining - step_dist_remaining)*inv_rate
+        pl_block->millimeters := mm_remaining
+        prep.steps_remaining := n_steps_remaining
+        prep.dt_remainder := (n_steps_remaining - step_dist_remaining)*inv_rate
 
         ' Check for exit conditions and flag to load next planner block.
-        if (mm_remaining== prep.mm_complete) 
+        if (mm_remaining == prep.mm_complete) 
             ' End of planner block or forced-termination. No more distance to be executed.
             if (mm_remaining > 0.0) ' At end of forced-termination.
                 ' Reset prep parameters for resuming and then bail. Allow the stepper ISR to complete
                 ' the segment queue, where realtime protocol will set new state upon receiving the
                 ' cycle stop flag from the ISR. Prep_segment is blocked until then.
-                bit_true(sys.step_control,STEP_CONTROL_END_MOTION)
+                bit_true(sys.step_control, STEP_CONTROL_END_MOTION)
 #ifdef PARKING_ENABLE
-                if (!(prep.recalculate_flag & PREP_FLAG_PARKING)) 
+                if (NOT(prep.recalculate_flag & PREP_FLAG_PARKING)) 
                     prep.recalculate_flag |= PREP_FLAG_HOLD_PARTIAL_BLOCK
 #endif
                 return ' Bail!
-            else 
-                ' End of planner block
+            else    ' End of planner block
                 ' The planner block is complete. All steps are set to be executed in the segment buffer.
-                if (sys.step_control & STEP_CONTROL_EXECUTE_SYS_MOTION) 
+                if (sys.step_control & STEP_CONTROL_EXECUTE_SYS_MOTION)
                     bit_true(sys.step_control,STEP_CONTROL_END_MOTION)
                 return
-            pl_block:= NULL ' Set pointer to indicate check and load next planner block.
-            plan_discard_current_block
+                pl_block := NULL ' Set pointer to indicate check and load next planner block.
+                plan_discard_current_block
 
 ' Called by realtime status reporting to fetch the current speed being executed. This value
 ' however is not exactly the current speed, but the speed computed in the last step segment
