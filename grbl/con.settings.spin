@@ -22,75 +22,87 @@
 #ifndef settings_h
 #define settings_h
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
 
 
 ' Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 ' when firmware is upgraded. Always stored in byte 0 of eeprom
-#define SETTINGS_VERSION 10  ' NOTE: Check settings_reset when moving to next version.
 
+' NOTE: Check settings_reset when moving to next version.
+CON
+
+    SETTINGS_VERSION                    = 10
 ' Define bit flag masks for the boolean settings in settings.flag.
-#define BIT_REPORT_INCHES      0
-#define BIT_LASER_MODE         1
-#define BIT_INVERT_ST_ENABLE   2
-#define BIT_HARD_LIMIT_ENABLE  3
-#define BIT_HOMING_ENABLE      4
-#define BIT_SOFT_LIMIT_ENABLE  5
-#define BIT_INVERT_LIMIT_PINS  6
-#define BIT_INVERT_PROBE_PIN   7
+    BIT_REPORT_INCHES                   = 0
+    BIT_LASER_MODE                      = 1
+    BIT_INVERT_ST_ENABLE                = 2
+    BIT_HARD_LIMIT_ENABLE               = 3
+    BIT_HOMING_ENABLE                   = 4
+    BIT_SOFT_LIMIT_ENABLE               = 5
+    BIT_INVERT_LIMIT_PINS               = 6
+    BIT_INVERT_PROBE_PIN                = 7
 
-#define BITFLAG_REPORT_INCHES      bit(BIT_REPORT_INCHES)
-#define BITFLAG_LASER_MODE         bit(BIT_LASER_MODE)
-#define BITFLAG_INVERT_ST_ENABLE   bit(BIT_INVERT_ST_ENABLE)
-#define BITFLAG_HARD_LIMIT_ENABLE  bit(BIT_HARD_LIMIT_ENABLE)
-#define BITFLAG_HOMING_ENABLE      bit(BIT_HOMING_ENABLE)
-#define BITFLAG_SOFT_LIMIT_ENABLE  bit(BIT_SOFT_LIMIT_ENABLE)
-#define BITFLAG_INVERT_LIMIT_PINS  bit(BIT_INVERT_LIMIT_PINS)
-#define BITFLAG_INVERT_PROBE_PIN   bit(BIT_INVERT_PROBE_PIN)
+    BITFLAG_REPORT_INCHES               = 1 << BIT_REPORT_INCHES
+    BITFLAG_LASER_MODE                  = 1 << BIT_LASER_MODE
+    BITFLAG_INVERT_ST_ENABLE            = 1 << BIT_INVERT_ST_ENABLE
+    BITFLAG_HARD_LIMIT_ENABLE           = 1 << BIT_HARD_LIMIT_ENABLE
+    BITFLAG_HOMING_ENABLE               = 1 << BIT_HOMING_ENABLE
+    BITFLAG_SOFT_LIMIT_ENABLE           = 1 << BIT_SOFT_LIMIT_ENABLE
+    BITFLAG_INVERT_LIMIT_PINS           = 1 << BIT_INVERT_LIMIT_PINS
+    BITFLAG_INVERT_PROBE_PIN            = 1 << BIT_INVERT_PROBE_PIN
 
 ' Define status reporting boolean enable bit flags in settings.status_report_mask
-#define BITFLAG_RT_STATUS_POSITION_TYPE     bit(0)
-#define BITFLAG_RT_STATUS_BUFFER_STATE      bit(1)
+    BITFLAG_RT_STATUS_POSITION_TYPE     = 1 << 0
+    BITFLAG_RT_STATUS_BUFFER_STATE      = 1 << 1
 
 ' Define settings restore bitflags.
-#define SETTINGS_RESTORE_DEFAULTS bit(0)
-#define SETTINGS_RESTORE_PARAMETERS bit(1)
-#define SETTINGS_RESTORE_STARTUP_LINES bit(2)
-#define SETTINGS_RESTORE_BUILD_INFO bit(3)
+    SETTINGS_RESTORE_DEFAULTS           = 1 << 0
+    SETTINGS_RESTORE_PARAMETERS         = 1 << 1
+    SETTINGS_RESTORE_STARTUP_LINES      = 1 << 2
+    SETTINGS_RESTORE_BUILD_INFO         = 1 << 3
 #ifndef SETTINGS_RESTORE_ALL
-#define SETTINGS_RESTORE_ALL $FF ' All bitflags
+' All bitflags
+    SETTINGS_RESTORE_ALL                = $FF
 #endif
 
 ' Define EEPROM memory address location values for Grbl settings and parameters
 ' NOTE: The Atmega328p has 1KB EEPROM. The upper half is reserved for parameters and
 ' the startup script. The lower half contains the global settings and space for future
 ' developments.
-#define EEPROM_ADDR_GLOBAL         1
-#define EEPROM_ADDR_PARAMETERS     512
-#define EEPROM_ADDR_STARTUP_BLOCK  768
-#define EEPROM_ADDR_BUILD_INFO     942
+    EEPROM_ADDR_GLOBAL                  = 1
+    EEPROM_ADDR_PARAMETERS              = 512
+    EEPROM_ADDR_STARTUP_BLOCK           = 768
+    EEPROM_ADDR_BUILD_INFO              = 942
 
 ' Define EEPROM address indexing for coordinate parameters
-#define N_COORDINATE_SYSTEM 6  ' Number of supported work coordinate systems (from index 1)
-#define SETTING_INDEX_NCOORD N_COORDINATE_SYSTEM+1 ' Total number of system stored (from index 0)
+    N_COORDINATE_SYSTEM                 = 6  ' Number of supported work coordinate systems (from index 1)
+
+' Total number of system stored (from index 0)
+    SETTING_INDEX_NCOORD                = N_COORDINATE_SYSTEM+1
 ' NOTE: Work coordinate indices are (0=G54, 1=G55, ... , 6=G59)
-#define SETTING_INDEX_G28    N_COORDINATE_SYSTEM    ' Home position 1
-#define SETTING_INDEX_G30    N_COORDINATE_SYSTEM+1  ' Home position 2
+
+' Home position 1
+    SETTING_INDEX_G28                   = N_COORDINATE_SYSTEM
+
+' Home position 2
+    SETTING_INDEX_G30                   = N_COORDINATE_SYSTEM+1
 ' #define SETTING_INDEX_G92    N_COORDINATE_SYSTEM+2  // Coordinate offset (G92.2,G92.3 not supported)
 
 ' Define Grbl axis settings numbering scheme. Starts at START_VAL, every INCREMENT, over N_SETTINGS.
-#define AXIS_N_SETTINGS          4
-#define AXIS_SETTINGS_START_VAL  100 ' NOTE: Reserving settings values => 100 for axis settings. Up to 255.
-#define AXIS_SETTINGS_INCREMENT  10  ' Must be greater than the number of axis settings
+    AXIS_N_SETTINGS                     = 4
+' NOTE: Reserving settings values => 100 for axis settings. Up to 255.
+    AXIS_SETTINGS_START_VAL             = 100
+' Must be greater than the number of axis settings
+    AXIS_SETTINGS_INCREMENT             = 10
 
-' Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
+{{ Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
 typedef struct 
     
   ' Axis settings
-  {float} steps_per_mm[N_AXIS]
-  {float} max_rate[N_AXIS]
-  {float} acceleration[N_AXIS]
-  {float} max_travel[N_AXIS]
+  long {float} steps_per_mm[N_AXIS]
+  long {float} max_rate[N_AXIS]
+  long {float} acceleration[N_AXIS]
+  long {float} max_travel[N_AXIS]
 
   ' Remaining Grbl settings
   byte pulse_microseconds
@@ -98,20 +110,20 @@ typedef struct
   byte dir_invert_mask
   byte stepper_idle_lock_time ' If max value 255, steppers do not disable.
   byte status_report_mask ' Mask to indicate desired report data.
-  {float} junction_deviation
-  {float} arc_tolerance
+  long {float} junction_deviation
+  long {float} arc_tolerance
 
-  {float} rpm_max
-  {float} rpm_min
+  long {float} rpm_max
+  long {float} rpm_min
 
   byte flags  ' Contains default boolean settings
 
   byte homing_dir_mask
-  {float} homing_feed_rate
-  {float} homing_seek_rate
-  uint16_t homing_debounce_delay
-  {float} homing_pulloff
+  long {float} homing_feed_rate
+  long {float} homing_seek_rate
+  word uint16_t homing_debounce_delay
+  long {float} homing_pulloff
  settings_t
 extern settings_t settings
-
+}}
 #endif
