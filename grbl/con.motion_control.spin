@@ -22,14 +22,14 @@
 #ifndef motion_control_h
 #define motion_control_h
 
-
+CON
 ' System motion commands must have a line number of zero.
-#define HOMING_CYCLE_LINE_NUMBER 0
-#define PARKING_MOTION_LINE_NUMBER 0
+    HOMING_CYCLE_LINE_NUMBER    = 0
+    PARKING_MOTION_LINE_NUMBER  = 0
 
-#define HOMING_CYCLE_ALL  0  ' Must be zero.
-#define HOMING_CYCLE_X    bit(X_AXIS)
-#define HOMING_CYCLE_Y    bit(Y_AXIS)
-#define HOMING_CYCLE_Z    bit(Z_AXIS)
+    HOMING_CYCLE_ALL            = 0  ' Must be zero.
+    HOMING_CYCLE_X              = 1 << X_AXIS
+    HOMING_CYCLE_Y              = 1 << Y_AXIS
+    HOMING_CYCLE_Z              = 1 << Z_AXIS
 
 #endif

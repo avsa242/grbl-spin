@@ -19,11 +19,15 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
+#include "con.serial.spin"
 
-#define RX_RING_BUFFER (RX_BUFFER_SIZE+1)
-#define TX_RING_BUFFER (TX_BUFFER_SIZE+1)
+CON
 
+    RX_RING_BUFFER                          = (RX_BUFFER_SIZE + 1)
+    TX_RING_BUFFER                          = (TX_BUFFER_SIZE + 1)
+    
+'    F_CPU = 1
 VAR
     byte {uint8_t} serial_rx_buffer[RX_RING_BUFFER]
     byte {uint8_t} serial_rx_buffer_head ':= 0              ' DAT vars instead? initialized values...
@@ -59,16 +63,16 @@ PUB serial_get_tx_buffer_count | {uint8_t} ttail
         return(serial_tx_buffer_head-ttail)
     return (TX_RING_BUFFER - (ttail-serial_tx_buffer_head))
 
-PUB serial_init | {uint16_t} UBRR0_value
+PUB serial_init | {uint16_t} UBRR0_value, UCSR0A, UBRR0H, UBRR0L, UCSR0B, RXEN0, TXEN0, RXCIE0, U2X0
 'XXX hardware specific bits
     ' Set baud rate
-#if BAUD_RATE < 57600
-    uint16_t UBRR0_value:= ((F_CPU / (8L * BAUD_RATE)) - 1)/2
-    UCSR0A &= !(1 << U2X0) ' baud doubler off  - Only needed on Uno XXX
-#else
-    uint16_t UBRR0_value:= ((F_CPU / (4L * BAUD_RATE)) - 1)/2
-    UCSR0A |= (1 << U2X0)  ' baud doubler on for high baud rates, i.e. 115200
-#endif
+    if BAUD_RATE < 57600
+        UBRR0_value := ((F_CPU / (8{L} * BAUD_RATE)) - 1)/2
+        UCSR0A &= !(1 << U2X0) ' baud doubler off  - Only needed on Uno XXX
+    else
+        UBRR0_value := ((F_CPU / (4{L} * BAUD_RATE)) - 1)/2
+        UCSR0A |= (1 << U2X0)  ' baud doubler on for high baud rates, i.e. 115200
+
     UBRR0H:= UBRR0_value >> 8
     UBRR0L:= UBRR0_value
 

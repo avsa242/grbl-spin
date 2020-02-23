@@ -22,11 +22,13 @@
 #ifndef spindle_control_h
 #define spindle_control_h
 
-#define SPINDLE_NO_SYNC false
-#define SPINDLE_FORCE_SYNC true
+CON
 
-#define SPINDLE_STATE_DISABLE  0  ' Must be zero.
-#define SPINDLE_STATE_CW       bit(0)
-#define SPINDLE_STATE_CCW      bit(1)
+    SPINDLE_NO_SYNC                         = FALSE
+    SPINDLE_FORCE_SYNC                      = TRUE
+
+    SPINDLE_STATE_DISABLE                   = 0  ' Must be zero.
+    SPINDLE_STATE_CW                        = 1 << 0
+    SPINDLE_STATE_CCW                       = 1 << 1
 
 #endif

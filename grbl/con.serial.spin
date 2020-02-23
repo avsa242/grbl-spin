@@ -22,17 +22,17 @@
 #ifndef serial_h
 #define serial_h
 
-
+CON
 #ifndef RX_BUFFER_SIZE
-#define RX_BUFFER_SIZE 128
+    RX_BUFFER_SIZE                          = 128
 #endif
 #ifndef TX_BUFFER_SIZE
 #ifdef USE_LINE_NUMBERS
-#define TX_BUFFER_SIZE 112
+    TX_BUFFER_SIZE                          = 112
 #else
-#define TX_BUFFER_SIZE 104
+    TX_BUFFER_SIZE                          = 104
 #endif
 #endif
+    SERIAL_NO_DATA                          = $FF
 
-#define SERIAL_NO_DATA $ff
 #endif

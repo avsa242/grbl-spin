@@ -21,9 +21,10 @@
 #ifndef jog_h
 #define jog_h
 
-#include "gcode.h"
+#include "con.gcode.spin"
 
+CON
 ' System motion line numbers must be zero.
-#define JOG_LINE_NUMBER 0
+    JOG_LINE_NUMBER                         = 0
 
 #endif

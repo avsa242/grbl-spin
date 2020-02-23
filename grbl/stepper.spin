@@ -22,18 +22,19 @@
 #include "core.con.grbl.spin"
 
 
+CON
 ' Some useful constants.
-#define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) ' min/segment
-#define REQ_MM_INCREMENT_SCALAR 1.25
-#define RAMP_ACCEL 0
-#define RAMP_CRUISE 1
-#define RAMP_DECEL 2
-#define RAMP_DECEL_OVERRIDE 3
+    DT_SEGMENT                              = (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) ' min/segment
+    REQ_MM_INCREMENT_SCALAR                 = 1.25
+    RAMP_ACCEL                              = 0
+    RAMP_CRUISE                             = 1
+    RAMP_DECEL                              = 2
+    RAMP_DECEL_OVERRIDE                     = 3
 
-#define PREP_FLAG_RECALCULATE bit(0)
-#define PREP_FLAG_HOLD_PARTIAL_BLOCK bit(1)
-#define PREP_FLAG_PARKING bit(2)
-#define PREP_FLAG_DECEL_OVERRIDE bit(3)
+    PREP_FLAG_RECALCULATE                   = 1 << 0
+    PREP_FLAG_HOLD_PARTIAL_BLOCK            = 1 << 1
+    PREP_FLAG_PARKING                       = 1 << 2
+    PREP_FLAG_DECEL_OVERRIDE                = 1 << 3
 
 ' Define Adaptive Multi-Axis Step-Smoothing(AMASS) levels and cutoff frequencies. The highest level
 ' frequency bin starts at 0Hz and ends at its cutoff frequency. The next lower level frequency bin
@@ -45,11 +46,11 @@
 ' NOTE: Current settings are set to overdrive the ISR to no more than 16kHz, balancing CPU overhead
 ' and timer accuracy.  Do not alter these settings unless you know what you are doing.
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-#define MAX_AMASS_LEVEL 3
+    MAX_AMASS_LEVEL                         = 3
 ' AMASS_LEVEL0: Normal operation. No AMASS. No upper cutoff frequency. Starts at LEVEL1 cutoff frequency.
-#define AMASS_LEVEL1 (F_CPU/8000) ' Over-drives ISR (x2). Defined as F_CPU/(Cutoff frequency in Hz)
-#define AMASS_LEVEL2 (F_CPU/4000) ' Over-drives ISR (x4)
-#define AMASS_LEVEL3 (F_CPU/2000) ' Over-drives ISR (x8)
+    AMASS_LEVEL1                            = (F_CPU/8000) ' Over-drives ISR (x2). Defined as F_CPU/(Cutoff frequency in Hz)
+    AMASS_LEVEL2                            = (F_CPU/4000) ' Over-drives ISR (x4)
+    AMASS_LEVEL3                            = (F_CPU/2000) ' Over-drives ISR (x8)
 
 #if MAX_AMASS_LEVEL =< 0
 #error "AMASS must have 1 or more levels to operate correctly."
@@ -428,7 +429,7 @@ PUB ISR(TIMER1_COMPA_vect)
 #endif
     if (st.counter_x > st.exec_block->step_event_count)
         st.step_outbits |= (1<<X_STEP_BIT)
-#if defined(ENABLE_DUAL_AXIS) AND (DUAL_AXIS_SELECT== X_AXIS)
+#if defined(ENABLE_DUAL_AXIS) AND (DUAL_AXIS_SELECT == X_AXIS)   ' XXX may need to be rewritten (DUAL_AXIS_SELECT is now a CONstant. #ifdef ENABLE_DUAL_AXIS, then if DUAL_AXIS_SELECT == X_AXIS on next line?)
         st.step_outbits_dual:= (1<<DUAL_STEP_BIT)
 #endif
         st.counter_x -= st.exec_block->step_event_count
@@ -527,18 +528,18 @@ PUB st_generate_step_dir_invert_masks | {uint8_t} idx
     step_port_invert_mask := 0
     dir_port_invert_mask := 0
     repeat idx from 0 to N_AXIS-1
-        if (bit_istrue(settings.step_invert_mask, bit(idx))) 
+        if (bit_istrue(settings.step_invert_mask, 1 << idx)) 
             step_port_invert_mask |= get_step_pin_mask(idx) 
-        if (bit_istrue(settings.dir_invert_mask, bit(idx))) 
+        if (bit_istrue(settings.dir_invert_mask, 1 << idx)) 
             dir_port_invert_mask |= get_direction_pin_mask(idx) 
 
 #ifdef ENABLE_DUAL_AXIS
     step_port_invert_mask_dual := 0
     dir_port_invert_mask_dual := 0
     ' NOTE: Dual axis invert uses the N_AXIS bit to set step and direction invert pins.    
-    if (bit_istrue(settings.step_invert_mask, bit(N_AXIS))) 
-        step_port_invert_mask_dual := (1<<DUAL_STEP_BIT) 
-    if (bit_istrue(settings.dir_invert_mask, bit(N_AXIS))) 
+    if (bit_istrue(settings.step_invert_mask, 1 << N_AXIS)) 
+        step_port_invert_mask_dual := (1<<DUAL_STEP_BIT)
+    if (bit_istrue(settings.dir_invert_mask, 1 << N_AXIS)) 
         dir_port_invert_mask_dual := (1<<DUAL_DIRECTION_BIT) 
 #endif
 

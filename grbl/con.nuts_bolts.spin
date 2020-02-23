@@ -22,49 +22,51 @@
 #ifndef nuts_bolts_h
 #define nuts_bolts_h
 
-'#define false 0    ' Reserved words in spin
-'#define true 1     '   and this one is different (-1) - hopefully it won't create a problem...
+CON
 
-#define SOME_LARGE_VALUE 1.0E+38
+    '#define false 0    ' Reserved words in spin
+    '#define true 1     '   and this one is different (-1) - hopefully it won't create a problem...
+
+    SOME_LARGE_VALUE        = 1.0E+38
 
 ' Axis array index values. Must start with 0 and be continuous.
 ' Number of axes
-#define N_AXIS 3
+    N_AXIS                  = 3
 ' Axis indexing value
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
+    X_AXIS                  = 0
+    Y_AXIS                  = 1
+    Z_AXIS                  = 2
 ' #define A_AXIS 3
 
 ' CoreXY motor assignments. DO NOT ALTER.
 ' NOTE: If the A and B motor axis bindings are changed, this effects the CoreXY equations.
 #ifdef COREXY
 ' Must be X_AXIS
-#define A_MOTOR X_AXIS
+    A_MOTOR                 = X_AXIS
 ' Must be Y_AXIS
-#define B_MOTOR Y_AXIS
+    B_MOTOR                 = Y_AXIS
 #endif
 
 ' Conversions
-#define MM_PER_INCH (25.40)
-#define INCH_PER_MM (0.0393701)
-#define TICKS_PER_MICROSECOND (F_CPU/1000000)
+    MM_PER_INCH             = 25.40
+    INCH_PER_MM             = 0.0393701
+    TICKS_PER_MICROSECOND   = F_CPU/1000000
 
-#define DELAY_MODE_DWELL       0
-#define DELAY_MODE_SYS_SUSPEND 1
+    DELAY_MODE_DWELL        = 0
+    DELAY_MODE_SYS_SUSPEND  = 1
 
 ' Useful macros
 PUB clear_vector(a)
 
-    bytefill(a, 0, {sizeof}a)
+    bytefill(a, 0, {sizeof}a)'XXX
 
 PUB clear_vector_float(a)
 
-    bytefill(a, 0{.0}, {sizeof(float)}4 * N_AXIS)
+    bytefill(a, 0{.0}, {sizeof(float)}4 * N_AXIS)'XXX
 
 PUB clear_vector_long(a)
 
-    bytefill(a, 0{.0}, {sizeof(long)}4 * N_AXIS)
+    bytefill(a, 0{.0}, {sizeof(long)}4 * N_AXIS)'XXX
 
 PUB max_(a, b)
 

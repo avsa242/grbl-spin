@@ -18,6 +18,13 @@
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }
+CON
+
+    _clkmode    = xtal1 + pll16x
+    _xinfreq    = 5_000_000
+
+    CLK_FREQ    = (_clkmode >> 6) * _xinfreq
+    F_CPU       = CLK_FREQ
 
 #include "core.con.grbl.spin"
 
@@ -37,6 +44,7 @@ VAR
     {void}  byte sys_rt_exec_debug
 #endif
 
+#include "serial.spin"
 
 PUB Main | {uint8_t} prior_state
 

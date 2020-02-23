@@ -21,12 +21,13 @@
 #ifndef coolant_control_h
 #define coolant_control_h
 
-#define COOLANT_NO_SYNC     false
-#define COOLANT_FORCE_SYNC  true
+CON
 
-#define COOLANT_STATE_DISABLE   0  ' Must be zero
-#define COOLANT_STATE_FLOOD     PL_COND_FLAG_COOLANT_FLOOD
-#define COOLANT_STATE_MIST      PL_COND_FLAG_COOLANT_MIST
+    COOLANT_NO_SYNC         = FALSE
+    COOLANT_FORCE_SYNC      = TRUE
 
+    COOLANT_STATE_DISABLE   = 0  ' Must be zero
+    COOLANT_STATE_FLOOD     = PL_COND_FLAG_COOLANT_FLOOD
+    COOLANT_STATE_MIST      = PL_COND_FLAG_COOLANT_MIST
 
 #endif
