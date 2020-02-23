@@ -39,7 +39,7 @@
 '#include <stdbool.h>
 
 ' Define the Grbl system include files. NOTE: Do not alter organization.
-#include "config.h"             '1 2 3
+#include "config.h"             '1 2 3 (contains preprocessor code only)
 #include "nuts_bolts.h"         '1 2 3 4
 #include "settings.h"           '1 2 3 4
 #include "system.h"             '1 2 3 4
@@ -57,8 +57,8 @@
 #include "report.h"             '1 2 3 4
 #include "serial.h"             '1 2 3 4 'XXX hardware specific bits in here
 #include "spindle_control.h"    '1 2 3 4
-#include "stepper.h"            '1 2 3
-#include "jog.h"                '1 2 3
+#include "stepper.h"            '1 2 3 4
+#include "jog.h"                '1 2 3 4
 
 ' ---------------------------------------------------------------------------------------
 ' COMPILE-TIME ERROR CHECKING OF DEFINE VALUES:
