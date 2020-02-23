@@ -81,8 +81,7 @@ PUB mc_line({float *}target, {plan_line_data_t *}pl_data)
 ' The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
 ' of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 ' distance from segment to the circle when the end points both lie on the circle.
-PUB mc_arc({float *}target, {plan_line_data_t *}pl_data, {float *}position, {float *}offset, {float }radius,
-  {byte }axis_0, {uint8_t }axis_1, {uint8_t }axis_linear, {uint8_t }is_clockwise_arc) | {float}center_axis0, center_axis1, r_axis0, r_axis1, rt_axis0, rt_axis1, angular_travel, {uint16_t}segments, {float}theta_per_segment, linear_per_segment, cos_T, sin_T, cos_Ti, sin_Ti, r_axisi, {uint16_t}i, {uint8_t}count
+PUB mc_arc({float *}target, {plan_line_data_t *}pl_data, {float *}position, {float *}offset, {float }radius, {byte }axis_0, {uint8_t }axis_1, {uint8_t }axis_linear, {uint8_t }is_clockwise_arc) | {float}center_axis0, center_axis1, r_axis0, r_axis1, rt_axis0, rt_axis1, angular_travel, {uint16_t}segments, {float}theta_per_segment, linear_per_segment, cos_T, sin_T, cos_Ti, sin_Ti, r_axisi, {uint16_t}i, {uint8_t}count
 
     center_axis0 := position[axis_0] + offset[axis_0]
     center_axis1 := position[axis_1] + offset[axis_1]

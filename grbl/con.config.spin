@@ -38,9 +38,10 @@
 '#define CPU_MAP_ATMEGA328P  ' Arduino Uno CPU
 #define CPU_MAP_P8X32A      'Parallax Propeller 1/P8X32A CPU
 
+CON
 ' Serial baud rate
 ' #define BAUD_RATE 230400
-#define BAUD_RATE 115200
+    BAUD_RATE                               = 115200
 
 ' Define realtime command special characters. These characters are 'picked-off' directly from the
 ' serial read data stream and are not passed to the grbl line execution parser. Select characters
@@ -49,10 +50,10 @@
 ' g-code programs, maybe selected for interface programs.
 ' NOTE: If changed, manually update help message in report.c.
 
-#define CMD_RESET $18 ' ctrl-x.
-#define CMD_STATUS_REPORT '?'
-#define CMD_CYCLE_START '~'
-#define CMD_FEED_HOLD '!'
+    CMD_RESET                               = $18 ' ctrl-x.
+    CMD_STATUS_REPORT                       = "?"
+    CMD_CYCLE_START                         = "~"
+    CMD_FEED_HOLD                           = "!"
 
 ' NOTE: All override realtime commands must be in the extended ASCII character set, starting
 ' at character value 128 ($80) and up to 255 (0xFF). If the normal set of realtime commands,
@@ -62,26 +63,26 @@
 ' #define CMD_STATUS_REPORT $81
 ' #define CMD_CYCLE_START $82
 ' #define CMD_FEED_HOLD $83
-#define CMD_SAFETY_DOOR $84
-#define CMD_JOG_CANCEL  $85
-#define CMD_DEBUG_REPORT $86 ' Only when DEBUG enabled, sends debug report in '' braces.
-#define CMD_FEED_OVR_RESET $90         ' Restores feed override value to 100%.
-#define CMD_FEED_OVR_COARSE_PLUS $91
-#define CMD_FEED_OVR_COARSE_MINUS $92
-#define CMD_FEED_OVR_FINE_PLUS  $93
-#define CMD_FEED_OVR_FINE_MINUS  $94
-#define CMD_RAPID_OVR_RESET $95        ' Restores rapid override value to 100%.
-#define CMD_RAPID_OVR_MEDIUM $96
-#define CMD_RAPID_OVR_LOW $97
+    CMD_SAFETY_DOOR                         = $84
+    CMD_JOG_CANCEL                          = $85
+    CMD_DEBUG_REPORT                        = $86 ' Only when DEBUG enabled, sends debug report in  braces.
+    CMD_FEED_OVR_RESET                      = $90         ' Restores feed override value to 100%.
+    CMD_FEED_OVR_COARSE_PLUS                = $91
+    CMD_FEED_OVR_COARSE_MINUS               = $92
+    CMD_FEED_OVR_FINE_PLUS                  = $93
+    CMD_FEED_OVR_FINE_MINUS                 = $94
+    CMD_RAPID_OVR_RESET                     = $95        ' Restores rapid override value to 100%.
+    CMD_RAPID_OVR_MEDIUM                    = $96
+    CMD_RAPID_OVR_LOW                       = $97
 ' #define CMD_RAPID_OVR_EXTRA_LOW $98 // *NOT SUPPORTED*
-#define CMD_SPINDLE_OVR_RESET $99      ' Restores spindle override value to 100%.
-#define CMD_SPINDLE_OVR_COARSE_PLUS $9A
-#define CMD_SPINDLE_OVR_COARSE_MINUS $9B
-#define CMD_SPINDLE_OVR_FINE_PLUS $9C
-#define CMD_SPINDLE_OVR_FINE_MINUS $9D
-#define CMD_SPINDLE_OVR_STOP $9E
-#define CMD_COOLANT_FLOOD_OVR_TOGGLE $A0
-#define CMD_COOLANT_MIST_OVR_TOGGLE $A1
+    CMD_SPINDLE_OVR_RESET                   = $99      ' Restores spindle override value to 100%.
+    CMD_SPINDLE_OVR_COARSE_PLUS             = $9A
+    CMD_SPINDLE_OVR_COARSE_MINUS            = $9B
+    CMD_SPINDLE_OVR_FINE_PLUS               = $9C
+    CMD_SPINDLE_OVR_FINE_MINUS              = $9D
+    CMD_SPINDLE_OVR_STOP                    = $9E
+    CMD_COOLANT_FLOOD_OVR_TOGGLE            = $A0
+    CMD_COOLANT_MIST_OVR_TOGGLE             = $A1
 
 ' If homing is enabled, homing init lock sets Grbl into an alarm state upon power up. This forces
 ' the user to perform the homing cycle (or override the locks) before doing anything else. This is
@@ -103,8 +104,8 @@
 ' on separate pin, but homed in one cycle. Also, it should be noted that the function of hard limits
 ' will not be affected by pin sharing.
 ' NOTE: Defaults are set for a traditional 3-axis CNC machine. Z-axis first to clear, followed by X & Y.
-#define HOMING_CYCLE_0 (1<<Z_AXIS)                ' REQUIRED: First move Z to clear workspace.
-#define HOMING_CYCLE_1 ((1<<X_AXIS)|(1<<Y_AXIS))  ' OPTIONAL: Then move X,Y at the same time.
+    HOMING_CYCLE_0                          = (1<<Z_AXIS)                ' REQUIRED: First move Z to clear workspace.
+    HOMING_CYCLE_1                          = ((1<<X_AXIS)|(1<<Y_AXIS))  ' OPTIONAL: Then move X,Y at the same time.
 ' #define HOMING_CYCLE_2                         // OPTIONAL: Uncomment and add axes mask to enable
 
 ' NOTE: The following are two examples to setup homing for 2-axis machines.
@@ -116,7 +117,7 @@
 ' Number of homing cycles performed after when the machine initially jogs to limit switches.
 ' This help in preventing overshoot and should improve repeatability. This value should be one or
 ' greater.
-#define N_HOMING_LOCATE_CYCLE 1 ' Integer (1-128)
+    N_HOMING_LOCATE_CYCLE                   = 1 ' Integer (1-128)
 
 ' Enables single axis homing commands. $HX, $HY, and $HZ for X, Y, and Z-axis homing. The full homing 
 ' cycle is still invoked by the $H command. This is disabled by default. It's here only to address
@@ -133,19 +134,19 @@
 ' and addresses are defined in settings.h. With the current settings, up to 2 startup blocks may
 ' be stored and executed in order. These startup blocks would typically be used to set the g-code
 ' parser state depending on user preferences.
-#define N_STARTUP_LINE 2 ' Integer (1-2)
+    N_STARTUP_LINE                          = 2 ' Integer (1-2)
 
 ' Number of floating decimal points printed by Grbl for certain value types. These settings are
 ' determined by realistic and commonly observed values in CNC machines. For example, position
 ' values cannot be less than 0.001mm or 0.0001in, because machines can not be physically more
 ' precise this. So, there is likely no need to change these, but you can if you need to here.
 ' NOTE: Must be an integer value from 0 to ~4. More than 4 may exhibit round-off errors.
-#define N_DECIMAL_COORDVALUE_INCH 4 ' Coordinate or position value in inches
-#define N_DECIMAL_COORDVALUE_MM   3 ' Coordinate or position value in mm
-#define N_DECIMAL_RATEVALUE_INCH  1 ' Rate or velocity value in in/min
-#define N_DECIMAL_RATEVALUE_MM    0 ' Rate or velocity value in mm/min
-#define N_DECIMAL_SETTINGVALUE    3 ' Decimals for floating point setting values
-#define N_DECIMAL_RPMVALUE        0 ' RPM value in rotations per min.
+    N_DECIMAL_COORDVALUE_INCH               = 4 ' Coordinate or position value in inches
+    N_DECIMAL_COORDVALUE_MM                 = 3 ' Coordinate or position value in mm
+    N_DECIMAL_RATEVALUE_INCH                = 1 ' Rate or velocity value in in/min
+    N_DECIMAL_RATEVALUE_MM                  = 0 ' Rate or velocity value in mm/min
+    N_DECIMAL_SETTINGVALUE                  = 3 ' Decimals for floating point setting values
+    N_DECIMAL_RPMVALUE                      = 0 ' RPM value in rotations per min.
 
 ' If your machine has two limits switches wired in parallel to one axis, you will need to enable
 ' this feature. Since the two switches are sharing a single pin, there is no way for Grbl to tell
@@ -177,8 +178,8 @@
 
 ' After the safety door switch has been toggled and restored, this setting sets the power-up delay
 ' between restoring the spindle and coolant and resuming the cycle.
-#define SAFETY_DOOR_SPINDLE_DELAY 4.0 ' Float (seconds)
-#define SAFETY_DOOR_COOLANT_DELAY 1.0 ' Float (seconds)
+    SAFETY_DOOR_SPINDLE_DELAY               = 4.0 ' Float (seconds)
+    SAFETY_DOOR_COOLANT_DELAY               = 1.0 ' Float (seconds)
 
 ' Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 ' IMPORTANT: If homing is enabled, you must reconfigure the homing cycle #defines above to
@@ -239,22 +240,22 @@
 ' Configure rapid, feed, and spindle override settings. These values define the max and min
 ' allowable override values and the coarse and fine increments per command received. Please
 ' note the allowable values in the descriptions following each define.
-#define DEFAULT_FEED_OVERRIDE           100 ' 100%. Don't change this value.
-#define MAX_FEED_RATE_OVERRIDE          200 ' Percent of programmed feed rate (100-255). Usually 120% or 200%
-#define MIN_FEED_RATE_OVERRIDE           10 ' Percent of programmed feed rate (1-100). Usually 50% or 1%
-#define FEED_OVERRIDE_COARSE_INCREMENT   10 ' (1-99). Usually 10%.
-#define FEED_OVERRIDE_FINE_INCREMENT      1 ' (1-99). Usually 1%.
+    DEFAULT_FEED_OVERRIDE                   = 100 ' 100%. Don't change this value.
+    MAX_FEED_RATE_OVERRIDE                  = 200 ' Percent of programmed feed rate (100-255). Usually 120% or 200%
+    MIN_FEED_RATE_OVERRIDE                  = 10 ' Percent of programmed feed rate (1-100). Usually 50% or 1%
+    FEED_OVERRIDE_COARSE_INCREMENT          = 10 ' (1-99). Usually 10%.
+    FEED_OVERRIDE_FINE_INCREMENT            = 1 ' (1-99). Usually 1%.
 
-#define DEFAULT_RAPID_OVERRIDE  100 ' 100%. Don't change this value.
-#define RAPID_OVERRIDE_MEDIUM    50 ' Percent of rapid (1-99). Usually 50%.
-#define RAPID_OVERRIDE_LOW       25 ' Percent of rapid (1-99). Usually 25%.
+    DEFAULT_RAPID_OVERRIDE                  = 100 ' 100%. Don't change this value.
+    RAPID_OVERRIDE_MEDIUM                   = 50 ' Percent of rapid (1-99). Usually 50%.
+    RAPID_OVERRIDE_LOW                      = 25 ' Percent of rapid (1-99). Usually 25%.
 ' #define RAPID_OVERRIDE_EXTRA_LOW 5 // *NOT SUPPORTED* Percent of rapid (1-99). Usually 5%.
 
-#define DEFAULT_SPINDLE_SPEED_OVERRIDE    100 ' 100%. Don't change this value.
-#define MAX_SPINDLE_SPEED_OVERRIDE        200 ' Percent of programmed spindle speed (100-255). Usually 200%.
-#define MIN_SPINDLE_SPEED_OVERRIDE         10 ' Percent of programmed spindle speed (1-100). Usually 10%.
-#define SPINDLE_OVERRIDE_COARSE_INCREMENT  10 ' (1-99). Usually 10%.
-#define SPINDLE_OVERRIDE_FINE_INCREMENT     1 ' (1-99). Usually 1%.
+    DEFAULT_SPINDLE_SPEED_OVERRIDE          = 100 ' 100%. Don't change this value.
+    MAX_SPINDLE_SPEED_OVERRIDE              = 200 ' Percent of programmed spindle speed (100-255). Usually 200%.
+    MIN_SPINDLE_SPEED_OVERRIDE              = 10 ' Percent of programmed spindle speed (1-100). Usually 10%.
+    SPINDLE_OVERRIDE_COARSE_INCREMENT       = 10 ' (1-99). Usually 10%.
+    SPINDLE_OVERRIDE_FINE_INCREMENT         = 1 ' (1-99). Usually 1%.
 
 ' When a M2 or M30 program end command is executed, most g-code states are restored to their defaults.
 ' This compile-time option includes the restoring of the feed, rapid, and spindle speed override values
@@ -283,10 +284,10 @@
 ' refreshes more often when its not doing anything important. With a good GUI, this data doesn't need
 ' to be refreshed very often, on the order of a several seconds.
 ' NOTE: WCO refresh must be 2 or greater. OVR refresh must be 1 or greater.
-#define REPORT_OVR_REFRESH_BUSY_COUNT 20  ' (1-255)
-#define REPORT_OVR_REFRESH_IDLE_COUNT 10  ' (1-255) Must be less than or equal to the busy count
-#define REPORT_WCO_REFRESH_BUSY_COUNT 30  ' (2-255)
-#define REPORT_WCO_REFRESH_IDLE_COUNT 10  ' (2-255) Must be less than or equal to the busy count
+    REPORT_OVR_REFRESH_BUSY_COUNT           = 20  ' (1-255)
+    REPORT_OVR_REFRESH_IDLE_COUNT           = 10  ' (1-255) Must be less than or equal to the busy count
+    REPORT_WCO_REFRESH_BUSY_COUNT           = 30  ' (2-255)
+    REPORT_WCO_REFRESH_IDLE_COUNT           = 10  ' (2-255) Must be less than or equal to the busy count
 
 ' The temporal resolution of the acceleration management subsystem. A higher number gives smoother
 ' acceleration, particularly noticeable on machines that run at very high feedrates, but may negatively
@@ -295,7 +296,7 @@
 ' NOTE: Changing this value also changes the execution time of a segment in the step segment buffer.
 ' When increasing this value, this stores less overall time in the segment buffer and vice versa. Make
 ' certain the step segment buffer is increased/decreased to account for these changes.
-#define ACCELERATION_TICKS_PER_SECOND 100
+    ACCELERATION_TICKS_PER_SECOND           = 100
 
 ' Adaptive Multi-Axis Step Smoothing (AMASS) is an advanced feature that does what its name implies,
 ' smoothing the stepping of multi-axis motions. This feature smooths motion particularly at low step
@@ -331,7 +332,7 @@
 ' Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with
 ' the selected axis with the tool oriented toward the negative direction. In other words, a positive
 ' tool length offset value is subtracted from the current location.
-#define TOOL_LENGTH_OFFSET_AXIS Z_AXIS ' Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS.
+    TOOL_LENGTH_OFFSET_AXIS                 = Z_AXIS ' Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS.
 
 ' Enables variable spindle output voltage for different RPM values. On the Arduino Uno, the spindle
 ' enable pin will output 5V for maximum RPM with 256 intermediate levels and 0V when disabled.
@@ -383,19 +384,19 @@
 ' limits or angle between neighboring block line move directions. This is useful for machines that can't
 ' tolerate the tool dwelling for a split second, i.e. 3d printers or laser cutters. If used, this value
 ' should not be much greater than zero or to the minimum value necessary for the machine to work.
-#define MINIMUM_JUNCTION_SPEED 0.0 ' (mm/min)
+    MINIMUM_JUNCTION_SPEED                  = 0.0 ' (mm/min)
 
 ' Sets the minimum feed rate the planner will allow. Any value below it will be set to this minimum
 ' value. This also ensures that a planned motion always completes and accounts for any floating-point
 ' round-off errors. Although not recommended, a lower value than 1.0 mm/min will likely work in smaller
 ' machines, perhaps to 0.1mm/min, but your success may vary based on multiple factors.
-#define MINIMUM_FEED_RATE 1.0 ' (mm/min)
+    MINIMUM_FEED_RATE                       = 1.0 ' (mm/min)
 
 ' Number of arc generation iterations by small angle approximation before exact arc trajectory
 ' correction with expensive sin and cos() calcualtions. This parameter maybe decreased if there
 ' are issues with the accuracy of the arc generations, or increased if arc execution is getting
 ' bogged down by too many trig calculations.
-#define N_ARC_CORRECTION 12 ' Integer (1-255)
+    N_ARC_CORRECTION                        = 12 ' Integer (1-255)
 
 ' The arc G2/3 g-code standard is problematic by definition. Radius-based arcs have horrible numerical
 ' errors when arc at semi-circles(pi) or full-circles(2*pi). Offset-based arcs are much more accurate
@@ -405,14 +406,14 @@
 ' This define value sets the machine epsilon cutoff to determine if the arc is a full-circle or not.
 ' NOTE: Be very careful when adjusting this value. It should always be greater than 1.2e-7 but not too
 ' much greater than this. The default setting should capture most, if not all, full arc error situations.
-#define ARC_ANGULAR_TRAVEL_EPSILON 5E-7 ' Float (radians)
+    ARC_ANGULAR_TRAVEL_EPSILON              = 5E-7 ' Float (radians)
 
 ' Time delay increments performed during a dwell. The default value is set at 50ms, which provides
 ' a maximum time delay of roughly 55 minutes, more than enough for most any application. Increasing
 ' this delay will increase the maximum dwell time linearly, but also reduces the responsiveness of
 ' run-time command executions, like status reports, since these are performed between each dwell
 ' time step. Also, keep in mind that the Arduino delay timer is not very accurate for long delays.
-#define DWELL_TIME_STEP 50 ' Integer (1-255) (milliseconds)
+    DWELL_TIME_STEP                         = 50 ' Integer (1-255) (milliseconds)
 
 ' Creates a delay between the direction pin setting and corresponding step pulse by creating
 ' another interrupt (Timer2 compare) to manage it. The main Grbl interrupt (Timer1 compare)
@@ -565,11 +566,11 @@
 ' #define PARKING_ENABLE  // Default disabled. Uncomment to enable
 
 ' Configure options for the parking motion, if enabled.
-#define PARKING_AXIS Z_AXIS ' Define which axis that performs the parking motion
-#define PARKING_TARGET -5.0 ' Parking axis target. In mm, as machine coordinate [-max_travel,0].
-#define PARKING_RATE 500.0 ' Parking fast rate after pull-out in mm/min.
-#define PARKING_PULLOUT_RATE 100.0 ' Pull-out/plunge slow feed rate in mm/min.
-#define PARKING_PULLOUT_INCREMENT 5.0 ' Spindle pull-out and plunge distance in mm. Incremental distance.
+    PARKING_AXIS                            = Z_AXIS ' Define which axis that performs the parking motion
+    PARKING_TARGET                          = -5.0 ' Parking axis target. In mm, as machine coordinate [-max_travel,0].
+    PARKING_RATE                            = 500.0 ' Parking fast rate after pull-out in mm/min.
+    PARKING_PULLOUT_RATE                    = 100.0 ' Pull-out/plunge slow feed rate in mm/min.
+    PARKING_PULLOUT_INCREMENT               = 5.0 ' Spindle pull-out and plunge distance in mm. Incremental distance.
                                       ' Must be positive value or equal to zero.
 
 ' Enables a special set of M-code commands that enables and disables the parking motion. 
@@ -598,20 +599,20 @@
 ' the 'fit_nonlinear_spindle.py' script solution. Used only when ENABLE_PIECEWISE_LINEAR_SPINDLE
 ' is enabled. Make sure the constant values are exactly the same as the script solution.
 ' NOTE: When N_PIECES < 4, unused RPM_LINE and RPM_POINT defines are not required and omitted.
-#define N_PIECES 4  ' Integer (1-4). Number of piecewise lines used in script solution.
-#define RPM_MAX  11686.4  ' Max RPM of model. $30 > RPM_MAX will be limited to RPM_MAX.
-#define RPM_MIN  202.5    ' Min RPM of model. $31 < RPM_MIN will be limited to RPM_MIN.
-#define RPM_POINT12  6145.4  ' Used N_PIECES >:=2. Junction point between lines 1 and 2.
-#define RPM_POINT23  9627.8  ' Used N_PIECES >:=3. Junction point between lines 2 and 3.
-#define RPM_POINT34  10813.9 ' Used N_PIECES := 4. Junction point between lines 3 and 4.
-#define RPM_LINE_A1  3.197101e-03  ' Used N_PIECES >:=1. A and B constants of line 1.
-#define RPM_LINE_B1  -3.526076e-1
-#define RPM_LINE_A2  1.722950e-2   ' Used N_PIECES >:=2. A and B constants of line 2.
-#define RPM_LINE_B2  8.588176e+01
-#define RPM_LINE_A3  5.901518e-02  ' Used N_PIECES >:=3. A and B constants of line 3.
-#define RPM_LINE_B3  4.881851e+02
-#define RPM_LINE_A4  1.203413e-01  ' Used N_PIECES := 4. A and B constants of line 4.
-#define RPM_LINE_B4  1.151360e+03
+    N_PIECES                                = 4  ' Integer (1-4). Number of piecewise lines used in script solution.
+    RPM_MAX                                 = 11686.4  ' Max RPM of model. $30 > RPM_MAX will be limited to RPM_MAX.
+    RPM_MIN                                 = 202.5    ' Min RPM of model. $31 < RPM_MIN will be limited to RPM_MIN.
+    RPM_POINT12                             = 6145.4  ' Used N_PIECES >:=2. Junction point between lines 1 and 2.
+    RPM_POINT23                             = 9627.8  ' Used N_PIECES >:=3. Junction point between lines 2 and 3.
+    RPM_POINT34                             = 10813.9 ' Used N_PIECES := 4. Junction point between lines 3 and 4.
+    RPM_LINE_A1                             = 3.197101e-03  ' Used N_PIECES >:=1. A and B constants of line 1.
+    RPM_LINE_B1                             = -3.526076e-1
+    RPM_LINE_A2                             = 1.722950e-2   ' Used N_PIECES >:=2. A and B constants of line 2.
+    RPM_LINE_B2                             = 8.588176e+01
+    RPM_LINE_A3                             = 5.901518e-02  ' Used N_PIECES >:=3. A and B constants of line 3.
+    RPM_LINE_B3                             = 4.881851e+02
+    RPM_LINE_A4                             = 1.203413e-01  ' Used N_PIECES := 4. A and B constants of line 4.
+    RPM_LINE_B4                             = 1.151360e+03
 
 { --------------------------------------------------------------------------------------- 
   This optional dual axis feature is primarily for the homing cycle to locate two sides of 
@@ -642,7 +643,7 @@
 ' #define ENABLE_DUAL_AXIS	// Default disabled. Uncomment to enable.
 
 ' Select the one axis to mirror another motor. Only X and Y axis is supported at this time.
-#define DUAL_AXIS_SELECT  X_AXIS  ' Must be either X_AXIS or Y_AXIS
+    DUAL_AXIS_SELECT                        = X_AXIS  ' Must be either X_AXIS or Y_AXIS
 
 ' To prevent the homing cycle from racking the dual axis, when one limit triggers before the
 ' other due to switch failure or noise, the homing cycle will automatically abort if the second 
@@ -651,9 +652,9 @@
 ' travel of the other non-dual axis, i.e. if dual axis select is X_AXIS at 5.0%, then the fail 
 ' distance will be computed as 5.0% of y-axis max travel. Fail distance max and min are the 
 ' limits of how far or little a valid fail distance is.
-#define DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT  5.0  ' Float (percent)
-#define DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX  25.0  ' Float (mm)
-#define DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN  2.5  ' Float (mm)
+    DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT = 5.0  ' Float (percent)
+    DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX      = 25.0  ' Float (mm)
+    DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN      = 2.5  ' Float (mm)
 
 ' Dual axis pin configuration currently supports two shields. Uncomment the shield you want,
 ' and comment out the other one(s).

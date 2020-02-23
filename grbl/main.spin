@@ -44,6 +44,7 @@ VAR
     {void}  byte sys_rt_exec_debug
 #endif
 
+#include "motion_control.spin"
 #include "serial.spin"
 
 PUB Main | {uint8_t} prior_state

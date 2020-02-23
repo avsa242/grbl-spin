@@ -82,7 +82,7 @@ PUB serial_init | {uint16_t} UBRR0_value, UCSR0A, UBRR0H, UBRR0L, UCSR0B, RXEN0,
     ' defaults to 8-bit, no parity, 1 stop bit
 
 ' Writes one byte to the TX serial buffer. Called by main program.
-PUB serial_write({uint8_t} data) | {uint8_t} next_head
+PUB serial_write({uint8_t} data) | {uint8_t} next_head, UCSR0B, UDRIE0
 
     ' Calculate next head
     next_head := serial_tx_buffer_head + 1
@@ -103,7 +103,7 @@ PUB serial_write({uint8_t} data) | {uint8_t} next_head
     UCSR0B |=  (1 << UDRIE0)
 
 ' Data Register Empty Interrupt handler
-ISR(SERIAL_UDRE) | {uint8_t} tail
+PUB ISR_DRE(SERIAL_UDRE) | {uint8_t} tail, UCSR0B, UDR0, UDRIE0
 
     tail := serial_tx_buffer_tail ' Temporary serial_tx_buffer_tail (to optimize for {CHECK_SCOPE} )
 
@@ -137,7 +137,7 @@ PUB serial_read | {uint8_t} tail, data
 
     return data
 
-ISR(SERIAL_RX) | {uint8_t} data, next_head, sreg
+PUB ISR_SRX(SERIAL_RX) | {uint8_t} data, next_head, sreg, UDR0
 
     data := UDR0 'XXX hardware specific
     ' Pick off realtime command characters directly from the serial stream. These characters are
