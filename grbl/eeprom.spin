@@ -25,14 +25,14 @@
 '#include <avr/interrupt.h>
 
 {{ These EEPROM bits have different names on different devices. }}
-#ifndef EEPE
-#define EEPE  EEWE  '!< EEPROM program/write enable.
-#define EEMPE EEMWE '!< EEPROM master program/write enable.
-#endif
+'#ifndef EEPE
+'#define EEPE  EEWE  '!< EEPROM program/write enable.
+'#define EEMPE EEMWE '!< EEPROM master program/write enable.
+'#endif
 
 {{ These two are unfortunately not defined in the device include files. }}
-#define EEPM1 5 '!< EEPROM Programming Mode Bit 1.
-#define EEPM0 4 '!< EEPROM Programming Mode Bit 0.
+'#define EEPM1 5 '!< EEPROM Programming Mode Bit 1.
+'#define EEPM0 4 '!< EEPROM Programming Mode Bit 0.
 
 {{ Define to reduce code size. }}
 #define EEPROM_IGNORE_SELFPROG '!< Remove SPM flag polling.
@@ -46,7 +46,10 @@
  *  \param  addr  EEPROM address to read from.
  *  \return  The byte read from the EEPROM address.
  }}
-PUB{unsigned char} eeprom_get_char({unsigned int} addr)
+PUB sei
+' dummy method
+
+PUB{unsigned char} eeprom_get_char({unsigned int} addr) | EECR, EEPE, EEAR, EEDR, EERE
 
 	repeat while( EECR & (1<<EEPE) ) ' Wait for completion of previous write.
 	EEAR := addr ' Set EEPROM address register.
@@ -70,7 +73,7 @@ PUB{unsigned char} eeprom_get_char({unsigned int} addr)
  *  \param  addr  EEPROM address to write to.
  *  \param  new_value  New EEPROM value.
  }}
-PUB eeprom_put_char({unsigned int}addr, {unsigned char} new_value ) | {char}old_value, {char}diff_mask
+PUB eeprom_put_char({unsigned int}addr, {unsigned char} new_value ) | {char}old_value, {char}diff_mask, EECR, EEPE, EEAR, EEDR, EERE, EEMPE, EEPM1, EEPM0
 
 	'char old_value ' Old EEPROM value.
 	'char diff_mask ' Difference mask, i.e. old value XOR new value.

@@ -23,11 +23,29 @@ CON
     _clkmode    = xtal1 + pll16x
     _xinfreq    = 5_000_000
 
-    CLK_FREQ    = (_clkmode >> 6) * _xinfreq
-    F_CPU       = CLK_FREQ
+'    CLK_FREQ    = (_clkmode >> 6) * _xinfreq
+    'F_CPU       = CLK_FREQ
 
 #include "core.con.grbl.spin"
 
+OBJ
+
+    eeprom          : "eeprom.spin"
+    gcode           : "gcode.spin"
+    jog             : "jog.spin"
+    limits          : "limits.spin"
+    motion_control  : "motion_control.spin"
+    nuts_bolts      : "nuts_bolts.spin"
+    planner         : "planner.spin"
+    print           : "print.spin"
+    probe           : "probe.spin"
+    protocol        : "protocol.spin"
+    report          : "report.spin"
+    serial          : "serial.spin"
+    settings        : "settings.spin"
+    spindle_control : "spindle_control.spin"
+    stepper         : "stepper.spin"
+    system          : "system.spin"
 
 VAR
 
@@ -44,17 +62,13 @@ VAR
     {void}  byte sys_rt_exec_debug
 #endif
 
-#include "settings.spin"
-#include "motion_control.spin"
-#include "serial.spin"
-
 PUB Main | {uint8_t} prior_state
 
     ' Initialize system upon power-up.
-    serial_init   ' Setup serial baud rate and interrupts
-    settings_init ' Load Grbl settings from EEPROM
-    stepper_init  ' Configure stepper pins and interrupt timers
-    system_init   ' Configure pinout pins and pin-change interrupt
+    serial.serial_init   ' Setup serial baud rate and interrupts
+    settings.settings_init ' Load Grbl settings from EEPROM
+    stepper.stepper_init  ' Configure stepper pins and interrupt timers
+    system.system_init   ' Configure pinout pins and pin-change interrupt
 
     bytefill(sys_position, 0, {sizeof}sys_position) ' Clear machine position.
     sei ' Enable interrupts       'XXX check how to implement this

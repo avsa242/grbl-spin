@@ -19,8 +19,6 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }
 
-#ifndef nuts_bolts_h
-#define nuts_bolts_h
 
 CON
 
@@ -50,7 +48,8 @@ CON
 ' Conversions
     MM_PER_INCH             = 25.40
     INCH_PER_MM             = 0.0393701
-    TICKS_PER_MICROSECOND   = F_CPU/1000000
+'    F_CPU                   = clkfreq'(_clkmode >> 6) * _xinfreq
+'    TICKS_PER_MICROSECOND   = F_CPU/1000000
 
     DELAY_MODE_DWELL        = 0
     DELAY_MODE_SYS_SUSPEND  = 1
@@ -116,4 +115,3 @@ PUB bit_isfalse(x, mask)
     return (x & mask) == 0
 '#define bit_isfalse(x,mask) ((x & mask) == 0)
 
-#endif

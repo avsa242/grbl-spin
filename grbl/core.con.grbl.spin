@@ -39,10 +39,10 @@
 '#include <stdbool.h>
 
 ' Define the Grbl system include files. NOTE: Do not alter organization.
-#include "con.config.spin"
-#include "con.nuts_bolts.spin"
+'#include "con.config.spin"
+'#include "con.nuts_bolts.spin"
 '#include "con.settings.spin"
-#include "con.system.spin"
+'#include "con.system.spin"
 '#include "con.defaults.spin"
 '#include "con.cpu_map.spin"
 '#include "con.planner.spin"
@@ -62,6 +62,8 @@
 
 ' ---------------------------------------------------------------------------------------
 ' COMPILE-TIME ERROR CHECKING OF DEFINE VALUES:
+#define F_CPU clkfreq
+#define TICKS_PER_MICROSECOND (clkfreq / 1000000)
 
 #ifndef HOMING_CYCLE_0
 #error "Required HOMING_CYCLE_0 not defined."
