@@ -44,6 +44,7 @@ VAR
     {void}  byte sys_rt_exec_debug
 #endif
 
+#include "settings.spin"
 #include "motion_control.spin"
 #include "serial.spin"
 

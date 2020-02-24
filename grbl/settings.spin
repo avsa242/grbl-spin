@@ -20,9 +20,10 @@
 }}
 
 '#include "core.con.grbl.spin"
+'#include "settings_t.spin"
 
 ' XXX write to EEPROM
-settings_t settings
+{{settings_t settings
 
 const __flash settings_t defaults:= 
     \
@@ -60,7 +61,7 @@ const __flash settings_t defaults:=
     .max_travel[X_AXIS]:= (-DEFAULT_X_MAX_TRAVEL),
     .max_travel[Y_AXIS]:= (-DEFAULT_Y_MAX_TRAVEL),
     .max_travel[Z_AXIS]:= (-DEFAULT_Z_MAX_TRAVEL)
-
+}}
 
 ' Method to store startup lines into EEPROM
 PUB settings_store_startup_line({uint8_t} n, {char *}line) | {uint32_t}addr
@@ -108,14 +109,13 @@ PUB settings_restore({uint8_t} restore_flag) | {uint8_t}idx, {float}coord_data[N
 
     if (restore_flag & SETTINGS_RESTORE_STARTUP_LINES)
 
-#if N_STARTUP_LINE > 0
+    if N_STARTUP_LINE > 0
         eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK, 0)
         eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + 1, 0) ' Checksum
-#endif
-#if N_STARTUP_LINE > 1
+
+    if N_STARTUP_LINE > 1
         eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + (LINE_BUFFER_SIZE + 1), 0)
         eeprom_put_char(EEPROM_ADDR_STARTUP_BLOCK + (LINE_BUFFER_SIZE + 2), 0) ' Checksum
-#endif
 
     if (restore_flag & SETTINGS_RESTORE_BUILD_INFO)
         eeprom_put_char(EEPROM_ADDR_BUILD_INFO, 0)
@@ -182,7 +182,7 @@ PUB settings_store_global_setting({uint8_t}parameter, {float}value) | {uint8_t}s
                 case (set_idx)
                     0:
 #ifdef MAX_STEP_RATE_HZ
-                        if (value*settings.max_rate[parameter] > (MAX_STEP_RATE_HZ*60.0))
+                        if (value*settings[max_rate][parameter] > (MAX_STEP_RATE_HZ*60.0))
                             return(STATUS_MAX_STEP_RATE_EXCEEDED) 
 #endif
                         settings.steps_per_mm[parameter] := value
@@ -192,8 +192,8 @@ PUB settings_store_global_setting({uint8_t}parameter, {float}value) | {uint8_t}s
                             return(STATUS_MAX_STEP_RATE_EXCEEDED)
 #endif
                         settings.max_rate[parameter] := value
-                    2: settings.acceleration[parameter] := value*60*60 ; ' Convert to mm/min^2 for grbl internal use.
-                    3: settings.max_travel[parameter] := -value ;  ' Store as negative for grbl internal use.
+                    2: settings.acceleration[parameter] := value*60*60 ' Convert to mm/min^2 for grbl internal use.
+                    3: settings.max_travel[parameter] := -value  ' Store as negative for grbl internal use.
             quit ' Exit repeat while-loop after setting has been configured and proceed to the EEPROM write call.
             else 
                 set_idx++

@@ -19,7 +19,8 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
+#include "con.protocol.spin"
 
 ' Define line flags. Includes comment type tracking and line overflow detection.
 #define LINE_FLAG_OVERFLOW bit(0)
@@ -534,15 +535,15 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
                     if (bit_isfalse(sys.suspend, SUSPEND_RESTART_RETRACT)) 
                         memcpy(restore_target, parking_target, {sizeof(}parking_target)
                         retract_waypoint += restore_target[PARKING_AXIS]
-                        retract_waypoint := min(retract_waypoint,PARKING_TARGET)
+                        retract_waypoint := min(retract_waypoint,PARKING_AXIS_TARGET)
 
                     ' Execute slow pull-out parking retract motion. Parking requires homing enabled, the
                     ' current location not exceeding the parking target location, and laser mode disabled.
                     ' NOTE: State is will remain DOOR, until the de-energizing and retract is complete.
 #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
-                    if ((bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_TARGET) AND bit_isfalse(settings.flags,BITFLAG_LASER_MODE) AND (sys.override_ctrl == OVERRIDE_PARKING_MOTION))
+                    if ((bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_AXIS_TARGET) AND bit_isfalse(settings.flags,BITFLAG_LASER_MODE) AND (sys.override_ctrl == OVERRIDE_PARKING_MOTION))
 #else
-                    if ((bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_TARGET) AND bit_isfalse(settings.flags, BITFLAG_LASER_MODE))
+                    if ((bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_AXIS_TARGET) AND bit_isfalse(settings.flags, BITFLAG_LASER_MODE))
 #endif
                         ' Retract spindle by pullout distance. Ensure retraction motion moves away from
                         ' the workpiece and waypoint motion doesn't exceed the parking target location.
@@ -560,8 +561,8 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
                         coolant_set_state(COOLANT_DISABLE) ' De-energize
 
                         ' Execute fast parking retract motion to parking target location.
-                        if (parking_target[PARKING_AXIS] < PARKING_TARGET)
-                            parking_target[PARKING_AXIS] := PARKING_TARGET
+                        if (parking_target[PARKING_AXIS] < PARKING_AXIS_TARGET)
+                            parking_target[PARKING_AXIS] := PARKING_AXIS_TARGET
                             pl_data->feed_rate:= PARKING_RATE
                             mc_parking_motion(parking_target, pl_data)
                     else
@@ -599,7 +600,7 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
                         if ((settings.flags & (BITFLAG_HOMING_ENABLE|BITFLAG_LASER_MODE)) == BITFLAG_HOMING_ENABLE)
 #endif
                             ' Check to ensure the motion doesn't move below pull-out position.
-                            if (parking_target[PARKING_AXIS] =< PARKING_TARGET)
+                            if (parking_target[PARKING_AXIS] =< PARKING_AXIS_TARGET)
                                 parking_target[PARKING_AXIS] := retract_waypoint
                                 pl_data->feed_rate := PARKING_RATE
                                 mc_parking_motion(parking_target, pl_data)
