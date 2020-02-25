@@ -20,10 +20,16 @@
 }}
 
 '#include "core.con.grbl.spin"
+#include "con.config.spin"
+#include "system.spin"
 
 ' Maximum number of digits in int32 (and float)
 #define MAX_INT_DIGITS 8
 
+
+PUB ceil(val)
+'dummy method
+    return val
 
 ' Extracts a floating point value from a string. The following code is based loosely on
 ' the avr-libc strtod function by Michael Stumpf and Dmitry Xmelkov and many freely
@@ -105,14 +111,14 @@ PUB delay_sec({float} seconds, {uint8_t} mode) | {uint16} i
     
  	i := ceil(1000/DWELL_TIME_STEP*seconds)
 	repeat while (i-- > 0)
-		if (sys.abort)
+		if (sys[sysabort])
             return
 		if (mode == DELAY_MODE_DWELL)
 			protocol_execute_realtime
 		else ' DELAY_MODE_SYS_SUSPEND
 		  ' Execute rt_system only to a nesting suspend loops.
 		  protocol_exec_rt_system
-		  if (sys.suspend & SUSPEND_RESTART_RETRACT)
+		  if (sys[suspend] & SUSPEND_RESTART_RETRACT)
             return ' Bail, if safety door reopens.
 		_delay_ms(DWELL_TIME_STEP) ' Delay DWELL_TIME_STEP increment
 
@@ -174,4 +180,64 @@ PUB{float} limit_value_by_axis_maximum({float *}max_value, {float *}unit_vec) | 
         if (unit_vec[idx] <> 0)  ' Avoid divide by zero.
             limit_value := min(limit_value, fabs(max_value[idx]/unit_vec[idx]))
     return(limit_value)
+
+PUB clear_vector(a)
+
+    bytefill(a, 0, {sizeof}a)'XXX
+
+PUB clear_vector_float(a)
+
+    bytefill(a, 0{.0}, {sizeof(float)}4 * N_AXIS)'XXX
+
+PUB clear_vector_long(a)
+
+    bytefill(a, 0{.0}, {sizeof(long)}4 * N_AXIS)'XXX                                                                                                                              
+
+PUB max_(a, b)
+
+    if a > b
+        return a
+    else
+        return b
+
+PUB min_(a, b)
+
+    if a < b
+        return a
+    else
+        return b
+
+PUB isequal_position_vector(a, b)
+
+    repeat N_AXIS
+        ifnot a[N_AXIS] == b[N_AXIS]
+            return FALSE
+
+    return TRUE
+'#define isequal_position_vector(a,b) !(memcmp(a, b, {sizeof(float)}*N_AXIS))
+
+' Bit field and masking macros
+PUB bit(n)
+
+    return 1 << n
+
+PUB bit_true(x, mask)
+
+    x |= mask
+    return x
+
+PUB bit_false(x, mask)
+
+    x &= !mask
+    return x
+
+PUB bit_istrue(x, mask)
+
+    return (x & mask) <> 0
+'#define bit_istrue(x,mask) ((x & mask) <> 0)
+
+PUB bit_isfalse(x, mask)
+
+    return (x & mask) == 0
+'#define bit_isfalse(x,mask) ((x & mask) == 0)
 

@@ -19,7 +19,7 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
 #include "con.nuts_bolts.spin"
 
 ' NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
@@ -33,32 +33,37 @@
 #define AXIS_COMMAND_MOTION_MODE 2
 #define AXIS_COMMAND_TOOL_LENGTH_OFFSET 3 ' *Undefined but required
 
+OBJ
+
+    settings    : "settings.spin"
+
+#include "parser_state_t.spin"  'provides var named gc_state
+
 VAR
 ' Declare gc extern struct
-    {parser_state_t} long gc_state
     {parser_block_t} long gc_block
 
 #define FAIL(status) return(status)
 
 PUB gc_init
 
-    bytefill(@gc_state, 0, {sizeof}parser_state_t)
+    bytefill(@gc_state, 0, sizeof_parser_state_t)
   ' Load default G54 coordinate system.
-    if (NOT(settings_read_coord_data(gc_state.modal.coord_select,gc_state.coord_system))) 
+    if (NOT(settings_read_coord_data(gc_state[coord_select], gc_state[coord_system]))) 
         report_status_message(STATUS_SETTING_READ_FAIL)
 
 ' Sets g-code parser position in mm. Input in steps. Called by the system abort and hard
 ' limit pull-off routines.
 PUB gc_sync_position
 
-    system_convert_array_steps_to_mpos(gc_state.position,sys_position)
+    system_convert_array_steps_to_mpos(gc_state[position], sys_position)
 
 ' Executes one line of 0-terminated G-Code. The line is assumed to contain only uppercase
 ' characters and signed floating point values (no whitespace). Comments and block delete
 ' characters have been removed. In this function, all units and positions are converted and
 ' exported to grbl's internal functions in terms of (mm, mm/min) and absolute machine
 ' coordinates, respectively.
-PUB{uint8_t} gc_execute_line({char *}line) | {uint8_t}axis_command, axis_0, axis_1, axis_linear, coord_select, axis_words, ijk_words, {uint16_t}command_words, value_words, {uint8_t}gc_parser_flags, {uint8_t}word_bit, char_counter, {char}letter, {float}value, {uint8_t}int_value, {uint16_t}mantissa, {uint8_t}idx, {float}block_coord_system[N_AXIS], x, y, h_x2_div_d, target_r, delta_r, {plan_line_data_t} plan_data, {*}pl_data, status, {uint8_t}gc_update_pos
+PUB{uint8_t} gc_execute_line({char *}line) | {uint8_t}axis_command, axis_0, axis_1, axis_linear, coord_select_l, axis_words, ijk_words, {uint16_t}command_words, value_words, {uint8_t}gc_parser_flags, {uint8_t}word_bit, char_counter, {char}letter, {float}value, {uint8_t}int_value, {uint16_t}mantissa, {uint8_t}idx, {float}block_coord_system[N_AXIS], x, y, h_x2_div_d, target_r, delta_r, {plan_line_data_t} plan_data, {*}pl_data, status, {uint8_t}gc_update_pos
   {{ -------------------------------------------------------------------------------------
      STEP 1: Initialize parser block struct and copy current g-code state modes. The parser
      updates these modes and commands as the block line is parser and will only be used and
@@ -66,11 +71,11 @@ PUB{uint8_t} gc_execute_line({char *}line) | {uint8_t}axis_command, axis_0, axis
      values struct, word tracking variables, and a non-modal commands tracker for the new
      block. This struct contains all of the necessary information to execute the block. }}
 
-    bytefill(@gc_block, 0, {sizeof}parser_block_t) ' Initialize the parser block struct.
-    bytemove(@gc_block.modal, @gc_state.modal, {sizeof}gc_modal_t) ' Copy current modes
-
+    bytefill(@gc_block, 0, sizeof_parser_block_t) ' Initialize the parser block struct.
+    bytemove(@gc_block[modal], @gc_state[modal], sizeof_gc_modal_t) ' Copy current modes
+i
     axis_command := AXIS_COMMAND_NONE
-    coord_select := 0 ' Tracks G10 P coordinate selection for execution
+    coord_select_l := 0 ' Tracks G10 P coordinate selection for execution
 
     ' Initialize bitflag tracking variables for axis indices compatible operations.
     axis_words := 0 ' XYZ tracking
@@ -528,8 +533,8 @@ PUB{uint8_t} gc_execute_line({char *}line) | {uint8_t}axis_command, axis_0, axis
                 FAIL(STATUS_GCODE_NO_AXIS_WORDS)  ' [No axis words]
             if (bit_isfalse(value_words, ((1<<WORD_P) | (1<<WORD_L)) )) 
                 FAIL(STATUS_GCODE_VALUE_WORD_MISSING)  ' [P/L word missing]
-            coord_select := {trunc(}gc_block.values.p ' Convert p value to int.
-            if (coord_select > N_COORDINATE_SYSTEM)
+            coord_select_l := {trunc(}gc_block.values.p ' Convert p value to int.
+            if (coord_select_l > N_COORDINATE_SYSTEM)
                 FAIL(STATUS_GCODE_UNSUPPORTED_COORD_SYS)  ' [Greater than N sys]
             if (gc_block.values.l <> 20)
                 if (gc_block.values.l == 2)
@@ -540,12 +545,12 @@ PUB{uint8_t} gc_execute_line({char *}line) | {uint8_t}axis_command, axis_0, axis
             bit_false(value_words, (bit(WORD_L) | bit(WORD_P)) )
 
             ' Determine coordinate system to change and try to load from EEPROM.
-            if (coord_select > 0)
-                coord_select--  ' Adjust P1-P6 index to EEPROM coordinate data indexing.
+            if (coord_select_l > 0)
+                coord_select_l--  ' Adjust P1-P6 index to EEPROM coordinate data indexing.
             else 
-                coord_select := gc_block.modal.coord_select  ' Index P0 as the active coordinate system
+                coord_select_l := gc_block.modal.coord_select  ' Index P0 as the active coordinate system
             ' NOTE: Store parameter data in IJK values. By rule, they are not in use with this command.
-            if (NOT settings_read_coord_data(coord_select, gc_block.values.ijk)) 
+            if (NOT settings_read_coord_data(coord_select_l, gc_block.values.ijk)) 
                 FAIL(STATUS_SETTING_READ_FAIL)  ' [EEPROM read fail]
 
             ' Pre-calculate the coordinate data changes.
@@ -985,9 +990,9 @@ PUB{uint8_t} gc_execute_line({char *}line) | {uint8_t}axis_command, axis_0, axis
     ' [19. Go to predefined position, Set G10, or Set axis offsets ]:
     case(gc_block.non_modal_command)
         NON_MODAL_SET_COORDINATE_DATA:
-            settings_write_coord_data(coord_select,gc_block.values.ijk)
+            settings_write_coord_data(coord_select_l,gc_block.values.ijk)
             ' Update system coordinate system if currently active.
-            if (gc_state.modal.coord_select== coord_select) 
+            if (gc_state.modal.coord_select== coord_select_l)
                 bytemove(gc_state.coord_system, gc_block.values.ijk, N_AXIS{*sizeof(float)})
             system_flag_wco_change
         NON_MODAL_GO_HOME_0: case NON_MODAL_GO_HOME_1:

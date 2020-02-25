@@ -19,9 +19,15 @@
 }}
 
 #include "core.con.grbl.spin"
+#include "system_t.spin"
 
-PUB coolant_init
+VAR
 
+    long sys    'addr of system_t struct
+
+PUB coolant_init(addr)
+
+    sys := addr
     COOLANT_FLOOD_DDR |= (1 << COOLANT_FLOOD_BIT) ' Configure as output pin
 #ifdef ENABLE_M7
     COOLANT_MIST_DDR |= (1 << COOLANT_MIST_BIT)

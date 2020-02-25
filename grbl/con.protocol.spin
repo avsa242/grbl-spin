@@ -30,7 +30,7 @@ CON
 ' memory space we can invest into here or we re-write the g-code parser not to have this
 ' buffer.
 #ifndef LINE_BUFFER_SIZE
-    LINE_BUFFER_SIZE                    = 80
+#define LINE_BUFFER_SIZE 80
 #endif
 
 #endif

@@ -27,6 +27,10 @@
 #define LINE_FLAG_COMMENT_PARENTHESES bit(1)
 #define LINE_FLAG_COMMENT_SEMICOLON bit(2)
 
+OBJ
+
+    util    : "nuts_bolts.spin"
+
 VAR
 
     byte {static char} line[LINE_BUFFER_SIZE] ' Line to be executed. Zero-terminated.
@@ -39,7 +43,7 @@ PUB protocol_main_loop | {uint8_t} line_flags, char_counter, c
 
     ' Perform some machine checks to make sure everything is good to go.
 #ifdef CHECK_LIMITS_AT_INIT
-    if (bit_istrue(settings.flags, BITFLAG_HARD_LIMIT_ENABLE)) 
+    if (util.bit_istrue(settings.flags, BITFLAG_HARD_LIMIT_ENABLE)) 
         if (limits_get_state) 
             sys.state := STATE_ALARM ' Ensure alarm state is active.
             report_feedback_message(MESSAGE_CHECK_LIMITS)
@@ -503,7 +507,7 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
         restore_condition := (block->condition & PL_COND_SPINDLE_MASK) | coolant_get_state
         restore_spindle_speed := block->spindle_speed
 #ifdef DISABLE_LASER_DURING_HOLD
-    if (bit_istrue(settings.flags, BITFLAG_LASER_MODE)) 
+    if (util.bit_istrue(settings.flags, BITFLAG_LASER_MODE)) 
         system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_STOP)
 #endif
 #else
@@ -541,9 +545,9 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
                     ' current location not exceeding the parking target location, and laser mode disabled.
                     ' NOTE: State is will remain DOOR, until the de-energizing and retract is complete.
 #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
-                    if ((bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_AXIS_TARGET) AND bit_isfalse(settings.flags,BITFLAG_LASER_MODE) AND (sys.override_ctrl == OVERRIDE_PARKING_MOTION))
+                    if ((util.bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_AXIS_TARGET) AND bit_isfalse(settings.flags,BITFLAG_LASER_MODE) AND (sys.override_ctrl == OVERRIDE_PARKING_MOTION))
 #else
-                    if ((bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_AXIS_TARGET) AND bit_isfalse(settings.flags, BITFLAG_LASER_MODE))
+                    if ((util.bit_istrue(settings.flags, BITFLAG_HOMING_ENABLE)) AND (parking_target[PARKING_AXIS] < PARKING_AXIS_TARGET) AND bit_isfalse(settings.flags, BITFLAG_LASER_MODE))
 #endif
                         ' Retract spindle by pullout distance. Ensure retraction motion moves away from
                         ' the workpiece and waypoint motion doesn't exceed the parking target location.
@@ -610,7 +614,7 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
                         if (gc_state.modal.spindle <> SPINDLE_DISABLE) 
                             ' Block if safety door re-opened during prior restore actions.
                             if (bit_isfalse(sys.suspend,SUSPEND_RESTART_RETRACT)) 
-                                if (bit_istrue(settings.flags,BITFLAG_LASER_MODE)) 
+                                if (util.bit_istrue(settings.flags,BITFLAG_LASER_MODE)) 
                                     ' When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
                                     bit_true(sys.tep_control, STEP_CONTROL_UPDATE_SPINDLE_PWM)
                                 else
@@ -659,7 +663,7 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
                     elseif (sys.spindle_stop_ovr & (SPINDLE_STOP_OVR_RESTORE | SPINDLE_STOP_OVR_RESTORE_CYCLE)) 
                         if (gc_state.modal.spindle <> SPINDLE_DISABLE) 
                             report_feedback_message(MESSAGE_SPINDLE_RESTORE)
-                            if (bit_istrue(settings.flags, BITFLAG_LASER_MODE)) 
+                            if (util.bit_istrue(settings.flags, BITFLAG_LASER_MODE)) 
                                 ' When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
                                 bit_true(sys.step_control, STEP_CONTROL_UPDATE_SPINDLE_PWM)
                             else 
@@ -670,7 +674,7 @@ PUB {static void} protocol_exec_rt_suspend | {float} restore_target[N_AXIS], par
                 else
                     ' Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
                     ' NOTE: STEP_CONTROL_UPDATE_SPINDLE_PWM is automatically reset upon resume in step generator.
-                    if (bit_istrue(sys.step_control, STEP_CONTROL_UPDATE_SPINDLE_PWM)) 
+                    if (util.bit_istrue(sys.step_control, STEP_CONTROL_UPDATE_SPINDLE_PWM)) 
                         spindle_set_state((restore_condition & (PL_COND_FLAG_SPINDLE_CW | PL_COND_FLAG_SPINDLE_CCW)), restore_spindle_speed)
                         bit_false(sys.step_control, STEP_CONTROL_UPDATE_SPINDLE_PWM)
             protocol_exec_rt_system

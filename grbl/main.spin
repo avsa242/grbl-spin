@@ -27,9 +27,11 @@ CON
     'F_CPU       = CLK_FREQ
 
 #include "core.con.grbl.spin"
+#include "system_t.spin"
 
 OBJ
 
+    coolant         : "coolant_control.spin"
     eeprom          : "eeprom.spin"
     gcode           : "gcode.spin"
     jog             : "jog.spin"
@@ -46,6 +48,10 @@ OBJ
     spindle_control : "spindle_control.spin"
     stepper         : "stepper.spin"
     system          : "system.spin"
+
+VAR
+
+    byte    sys[sizeof_system_t]    'system_t struct
 
 VAR
 
@@ -115,7 +121,7 @@ PUB Main | {uint8_t} prior_state
         serial_reset_read_buffer ' Clear serial read buffer
         gc_init ' Set g-code parser to default state
         spindle_init
-        coolant_init
+        coolant.coolant_init
         limits_init
         probe_init
         plan_reset ' Clear block buffer and planner variables

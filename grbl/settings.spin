@@ -21,6 +21,7 @@
 
 '#include "core.con.grbl.spin"
 '#include "settings_t.spin"
+#include "con.nuts_bolts.spin"
 
 ' XXX write to EEPROM
 {{settings_t settings
@@ -62,6 +63,9 @@ const __flash settings_t defaults:=
     .max_travel[Y_AXIS]:= (-DEFAULT_Y_MAX_TRAVEL),
     .max_travel[Z_AXIS]:= (-DEFAULT_Z_MAX_TRAVEL)
 }}
+OBJ
+
+    protocol    : "protocol.spin"
 
 ' Method to store startup lines into EEPROM
 PUB settings_store_startup_line({uint8_t} n, {char *}line) | {uint32_t}addr

@@ -29,11 +29,15 @@ CON
 
 ' Axis array index values. Must start with 0 and be continuous.
 ' Number of axes
-    N_AXIS                  = 3
+'    N_AXIS                  = 3
+#define N_AXIS              3
 ' Axis indexing value
-    X_AXIS                  = 0
-    Y_AXIS                  = 1
-    Z_AXIS                  = 2
+'    X_AXIS                  = 0
+'    Y_AXIS                  = 1
+'    Z_AXIS                  = 2
+#define X_AXIS              0
+#define Y_AXIS              1
+#define Z_AXIS              2
 ' #define A_AXIS 3
 
 ' CoreXY motor assignments. DO NOT ALTER.
@@ -54,64 +58,4 @@ CON
     DELAY_MODE_DWELL        = 0
     DELAY_MODE_SYS_SUSPEND  = 1
 
-' Useful macros
-PUB clear_vector(a)
-
-    bytefill(a, 0, {sizeof}a)'XXX
-
-PUB clear_vector_float(a)
-
-    bytefill(a, 0{.0}, {sizeof(float)}4 * N_AXIS)'XXX
-
-PUB clear_vector_long(a)
-
-    bytefill(a, 0{.0}, {sizeof(long)}4 * N_AXIS)'XXX
-
-PUB max_(a, b)
-
-    if a > b
-        return a
-    else
-        return b
-
-PUB min_(a, b)
-
-    if a < b
-        return a
-    else
-        return b
-
-PUB isequal_position_vector(a, b)
-
-    repeat N_AXIS
-        ifnot a[N_AXIS] == b[N_AXIS]
-            return FALSE
-
-    return TRUE
-'#define isequal_position_vector(a,b) !(memcmp(a, b, {sizeof(float)}*N_AXIS))
-
-' Bit field and masking macros
-PUB bit(n)
-
-    return 1 << n
-
-PUB bit_true(x, mask)
-
-    x |= mask
-    return x
-
-PUB bit_false(x, mask)
-
-    x &= !mask
-    return x
-
-PUB bit_istrue(x, mask)
-
-    return (x & mask) <> 0
-'#define bit_istrue(x,mask) ((x & mask) <> 0)
-
-PUB bit_isfalse(x, mask)
-
-    return (x & mask) == 0
-'#define bit_isfalse(x,mask) ((x & mask) == 0)
 
