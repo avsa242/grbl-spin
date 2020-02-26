@@ -39,7 +39,7 @@
 '#include <stdbool.h>
 
 ' Define the Grbl system include files. NOTE: Do not alter organization.
-#include "con.config.spin"
+'#include "con.config.spin"
 #include "con.nuts_bolts.spin"
 '#include "con.settings.spin"
 #include "con.system.spin"

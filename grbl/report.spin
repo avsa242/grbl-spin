@@ -555,18 +555,16 @@ PUB report_realtime_status | {uint8_t}idx, {int32_t}current_position[N_AXIS], {f
             serial_write("P") 
         if (lim_pin_state) 
 #ifdef ENABLE_DUAL_AXIS
-#if (DUAL_AXIS_SELECT == X_AXIS)
+        if (DUAL_AXIS_SELECT == X_AXIS)
             if (bit_istrue(lim_pin_state, (bit(X_AXIS)|bit(N_AXIS)))) 
                 serial_write("X")
             if (bit_istrue(lim_pin_state, bit(Y_AXIS))) 
                 serial_write("Y")
-#endif
-#if (DUAL_AXIS_SELECT== Y_AXIS)
+        if (DUAL_AXIS_SELECT == Y_AXIS)
             if (bit_istrue(lim_pin_state, bit(X_AXIS)))
                 serial_write("X")
             if (bit_istrue(lim_pin_state, (bit(Y_AXIS)|bit(N_AXIS))))
                 serial_write("Y")
-#endif
             if (bit_istrue(lim_pin_state, bit(Z_AXIS)))
                 serial_write("Z")
 #else

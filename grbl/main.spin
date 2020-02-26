@@ -43,10 +43,12 @@ VAR
     {void}  byte sys_rt_exec_debug
 #endif
 
+#include "config.spin"
 #include "settings.spin"
 #include "eeprom.spin"
 #include "protocol.spin"
 #include "report.spin"
+#include "stepper.spin"
 
 '#include "motion_control.spin"
 '#include "serial.spin"

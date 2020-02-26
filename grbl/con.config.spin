@@ -25,8 +25,8 @@
 
 ' IMPORTANT: Any changes here requires a full re-compiling of the source code to propagate them.
 
-#ifndef config_h
-#define config_h
+'#ifndef config_h
+'#define config_h
 '#include "core.con.grbl.spin" ' For Arduino IDE compatibility.
 
 
@@ -689,4 +689,4 @@ CON
 ' Paste CPU_MAP definitions here.
 
 ' Paste default settings definitions here.
-#endif
+'#endif

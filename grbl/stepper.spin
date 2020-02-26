@@ -19,7 +19,7 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
 
 
 CON
@@ -52,7 +52,7 @@ CON
     AMASS_LEVEL2                            = (F_CPU/4000) ' Over-drives ISR (x4)
     AMASS_LEVEL3                            = (F_CPU/2000) ' Over-drives ISR (x8)
 
-#if MAX_AMASS_LEVEL =< 0
+#ifndef MAX_AMASS_LEVEL '=< 0
 #error "AMASS must have 1 or more levels to operate correctly."
 #endif
 #endif
@@ -328,7 +328,7 @@ PUB st_go_idle | {bool} pin_state
 ' TODO: Replace direct updating of the int32 position counters in the ISR somehow. Perhaps use smaller
 ' int8 variables and update position counters only when a segment completes. This can get complicated
 ' with probing and homing cycles that require true real-time positions.
-PUB ISR(TIMER1_COMPA_vect)
+PUB ISR_Stepper1(TIMER1_COMPA_vect)
 
     if (busy)
         return  ' The busy-flag is used to avoid reentering this interrupt
@@ -429,8 +429,9 @@ PUB ISR(TIMER1_COMPA_vect)
 #endif
     if (st.counter_x > st.exec_block->step_event_count)
         st.step_outbits |= (1<<X_STEP_BIT)
-#if defined(ENABLE_DUAL_AXIS) AND (DUAL_AXIS_SELECT == X_AXIS)   ' XXX may need to be rewritten (DUAL_AXIS_SELECT is now a CONstant. #ifdef ENABLE_DUAL_AXIS, then if DUAL_AXIS_SELECT == X_AXIS on next line?)
-        st.step_outbits_dual:= (1<<DUAL_STEP_BIT)
+#ifdef (ENABLE_DUAL_AXIS) 'AND (DUAL_AXIS_SELECT == X_AXIS)   ' XXX may need to be rewritten (DUAL_AXIS_SELECT is now a CONstant. #ifdef ENABLE_DUAL_AXIS, then if DUAL_AXIS_SELECT == X_AXIS on next line?)
+        if DUAL_AXIS_SELECT == X_AXIS
+            st.step_outbits_dual:= (1<<DUAL_STEP_BIT)
 #endif
         st.counter_x -= st.exec_block->step_event_count
         if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT))
@@ -445,8 +446,9 @@ PUB ISR(TIMER1_COMPA_vect)
 #endif
     if (st.counter_y > st.exec_block->step_event_count)
         st.step_outbits |= (1<<Y_STEP_BIT)
-#if defined(ENABLE_DUAL_AXIS) AND (DUAL_AXIS_SELECT== Y_AXIS)
-        st.step_outbits_dual:= (1<<DUAL_STEP_BIT)
+#ifdef (ENABLE_DUAL_AXIS)
+        if DUAL_AXIS_SELECT == Y_AXIS
+            st.step_outbits_dual:= (1<<DUAL_STEP_BIT)
 #endif
         st.counter_y -= st.exec_block->step_event_count
         if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT))
@@ -706,14 +708,14 @@ PUB st_prep_buffer | {uint8_t}idx, {float pl_block->step_event_count}, {float} i
                 st_prep_block := @st_block_buffer[prep.st_block_index]
                 st_prep_block->direction_bits := pl_block->direction_bits
 #ifdef ENABLE_DUAL_AXIS
-#if (DUAL_AXIS_SELECT == X_AXIS)
-                if (st_prep_block->direction_bits & (1<<X_DIRECTION_BIT)) 
+                if (DUAL_AXIS_SELECT == X_AXIS)
+                    if (st_prep_block->direction_bits & (1<<X_DIRECTION_BIT)) 
 #elif (DUAL_AXIS_SELECT == Y_AXIS)
                 if (st_prep_block->direction_bits & (1<<Y_DIRECTION_BIT)) 
 #endif
-                    st_prep_block->direction_bits_dual := (1<<DUAL_DIRECTION_BIT)
-                else
-                    st_prep_block->direction_bits_dual := 0 
+                        st_prep_block->direction_bits_dual := (1<<DUAL_DIRECTION_BIT)
+                    else
+                        st_prep_block->direction_bits_dual := 0 
 #endif
 #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
                 repeat idx from 0 to N_AXIS-1

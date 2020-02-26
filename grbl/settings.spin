@@ -186,19 +186,19 @@ PUB settings_store_global_setting({uint8_t}parameter, {float}value) | {uint8_t}s
                 case (set_idx)
                     0:
 #ifdef MAX_STEP_RATE_HZ
-                        if (value*settings[max_rate][parameter] > (MAX_STEP_RATE_HZ*60.0))
+                        if (value*settings[max_rate+(parameter * _float)] > (MAX_STEP_RATE_HZ*60.0))
                             return(STATUS_MAX_STEP_RATE_EXCEEDED) 
 #endif
-                        settings.steps_per_mm[parameter] := value
+                        settings[steps_per_mm+(parameter * _float)] := value
                     1:
 #ifdef MAX_STEP_RATE_HZ
-                        if (value*settings.steps_per_mm[parameter] > (MAX_STEP_RATE_HZ*60.0))
+                        if (value*settings[steps_per_mm+(parameter * _float)] > (MAX_STEP_RATE_HZ*60.0))
                             return(STATUS_MAX_STEP_RATE_EXCEEDED)
 #endif
-                        settings.max_rate[parameter] := value
-                    2: settings.acceleration[parameter] := value*60*60 ' Convert to mm/min^2 for grbl internal use.
-                    3: settings.max_travel[parameter] := -value  ' Store as negative for grbl internal use.
-            quit ' Exit repeat while-loop after setting has been configured and proceed to the EEPROM write call.
+                        settings[max_rate+(parameter * _float)] := value
+                    2: settings[acceleration + (parameter * _float)] := value*60*60 ' Convert to mm/min^2 for grbl internal use.
+                    3: settings[max_travel + (parameter * _float)] := -value  ' Store as negative for grbl internal use.
+                quit ' Exit repeat while-loop after setting has been configured and proceed to the EEPROM write call.
             else 
                 set_idx++
                 ' If axis index greater than N_AXIS or setting index greater than number of axis settings, error out.
@@ -207,76 +207,76 @@ PUB settings_store_global_setting({uint8_t}parameter, {float}value) | {uint8_t}s
                 parameter -= AXIS_SETTINGS_INCREMENT
     else 
         ' Store non-axis Grbl settings
-        int_value := trunc(value)
+        int_value := {trunc(}value
         case(parameter) 
             0:
                 if (int_value < 3) 
                     return(STATUS_SETTING_STEP_PULSE_MIN) 
-                settings.pulse_microseconds := int_value
-            1: settings.stepper_idle_lock_time := int_value
+                settings[pulse_microseconds] := int_value
+            1: settings[stepper_idle_lock_time] := int_value
             2:
-                settings.step_invert_mask := int_value
+                settings[step_invert_mask] := int_value
                 st_generate_step_dir_invert_masks ' Regenerate step and direction port invert masks.
             3:
-                settings.dir_invert_mask := int_value
+                settings[dir_invert_mask] := int_value
                 st_generate_step_dir_invert_masks ' Regenerate step and direction port invert masks.
             4: ' Reset to ensure change. Immediate re-init may cause problems.
                 if (int_value)
-                    settings.flags |= BITFLAG_INVERT_ST_ENABLE
+                    settings[flags] |= BITFLAG_INVERT_ST_ENABLE
                 else
-                    settings.flags &= !BITFLAG_INVERT_ST_ENABLE
+                    settings[flags] &= !BITFLAG_INVERT_ST_ENABLE
             5: ' Reset to ensure change. Immediate re-init may cause problems.
                 if (int_value)
-                    settings.flags |= BITFLAG_INVERT_LIMIT_PINS
+                    settings[flags] |= BITFLAG_INVERT_LIMIT_PINS
                 else 
-                    settings.flags &= !BITFLAG_INVERT_LIMIT_PINS 
+                    settings[flags] &= !BITFLAG_INVERT_LIMIT_PINS 
             6: ' Reset to ensure change. Immediate re-init may cause problems.
                 if (int_value)
-                    settings.flags |= BITFLAG_INVERT_PROBE_PIN 
+                    settings[flags] |= BITFLAG_INVERT_PROBE_PIN 
                 else 
-                    settings.flags &= !BITFLAG_INVERT_PROBE_PIN 
+                    settings[flags] &= !BITFLAG_INVERT_PROBE_PIN 
                 probe_configure_invert_mask(FALSE)
-            10: settings.status_report_mask := int_value
-            11: settings.junction_deviation := value
-            12: settings.arc_tolerance := value
+            10: settings[status_report_mask] := int_value
+            11: settings[junction_deviation] := value
+            12: settings[arc_tolerance] := value
             13:
                 if (int_value)
-                    settings.flags |= BITFLAG_REPORT_INCHES 
+                    settings[flags] |= BITFLAG_REPORT_INCHES 
                 else
-                    settings.flags &= !BITFLAG_REPORT_INCHES 
+                    settings[flags] &= !BITFLAG_REPORT_INCHES 
                 system_flag_wco_change ' Make sure WCO is immediately updated.
             20:
                 if (int_value) 
-                    if (bit_isFALSE(settings.flags, BITFLAG_HOMING_ENABLE)) 
+                    if (bit_isFALSE(settings[flags], BITFLAG_HOMING_ENABLE)) 
                         return(STATUS_SOFT_LIMIT_ERROR) 
-                    settings.flags |= BITFLAG_SOFT_LIMIT_ENABLE
+                    settings[flags] |= BITFLAG_SOFT_LIMIT_ENABLE
                 else 
-                    settings.flags &= !BITFLAG_SOFT_LIMIT_ENABLE 
+                    settings[flags] &= !BITFLAG_SOFT_LIMIT_ENABLE 
             21:
                 if (int_value) 
-                    settings.flags |= BITFLAG_HARD_LIMIT_ENABLE 
+                    settings[flags] |= BITFLAG_HARD_LIMIT_ENABLE 
                 else 
-                    settings.flags &= !BITFLAG_HARD_LIMIT_ENABLE 
+                    settings[flags] &= !BITFLAG_HARD_LIMIT_ENABLE 
                 limits_init ' Re-init to immediately change. NOTE: Nice to have but could be problematic later.
             22:
                 if (int_value) 
-                    settings.flags |= BITFLAG_HOMING_ENABLE 
+                    settings[flags] |= BITFLAG_HOMING_ENABLE 
                 else 
-                    settings.flags &= !BITFLAG_HOMING_ENABLE
-                    settings.flags &= !BITFLAG_SOFT_LIMIT_ENABLE ' Force disable soft-limits.
-            23: settings.homing_dir_mask := int_value
-            24: settings.homing_feed_rate := value
-            25: settings.homing_seek_rate := value
-            26: settings.homing_debounce_delay := int_value
-            27: settings.homing_pulloff := value
-            30: settings.rpm_max := value spindle_init ' Re-initialize spindle rpm calibration
-            31: settings.rpm_min := value spindle_init ' Re-initialize spindle rpm calibration
+                    settings[flags] &= !BITFLAG_HOMING_ENABLE
+                    settings[flags] &= !BITFLAG_SOFT_LIMIT_ENABLE ' Force disable soft-limits.
+            23: settings[homing_dir_mask] := int_value
+            24: settings[homing_feed_rate] := value
+            25: settings[homing_seek_rate] := value
+            26: settings[homing_debounce_delay] := int_value
+            27: settings[homing_pulloff] := value
+            30: settings[rpm_max] := value spindle_init ' Re-initialize spindle rpm calibration
+            31: settings[rpm_min] := value spindle_init ' Re-initialize spindle rpm calibration
             32:
 #ifdef VARIABLE_SPINDLE
                 if (int_value) 
-                    settings.flags |= BITFLAG_LASER_MODE 
+                    settings[flags] |= BITFLAG_LASER_MODE 
                 else 
-                    settings.flags &= !BITFLAG_LASER_MODE 
+                    settings[flags] &= !BITFLAG_LASER_MODE 
 #else
                 return(STATUS_SETTING_DISABLED_LASER)
 #endif
