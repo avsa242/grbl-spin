@@ -20,9 +20,13 @@
 }}
 
 '#include "core.con.grbl.spin"
-#include "settings_t.spin"
+#include "con.settings.spin"
 
 ' XXX write to EEPROM
+VAR
+
+    byte defaults[sizeof_settings_t]
+
 {{settings_t settings
 
 const __flash settings_t defaults:= 
@@ -85,15 +89,15 @@ PUB settings_write_coord_data({uint8_t} coord_select, {float *}coord_data) | {ui
 #ifdef FORCE_BUFFER_SYNC_DURING_EEPROM_WRITE
     protocol_buffer_synchronize
 #endif
-    addr := coord_select * ({sizeof(float)}* N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
-    memcpy_to_eeprom_with_checksum(addr, coord_data, {sizeof(float)}*N_AXIS)
+    addr := coord_select * ({sizeof(float)}4 * N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
+    memcpy_to_eeprom_with_checksum(addr, coord_data, {sizeof(float)}4 * N_AXIS)
 
 ' Method to store Grbl global settings struct and version number into EEPROM
 ' NOTE: This function can only be called in IDLE state.
 PUB write_global_settings
 
     eeprom_put_char(0, SETTINGS_VERSION)
-    memcpy_to_eeprom_with_checksum(EEPROM_ADDR_GLOBAL, @settings, {sizeof(settings_t)})
+    memcpy_to_eeprom_with_checksum(EEPROM_ADDR_GLOBAL, @settings, sizeof_settings_t)
 
 ' Method to restore EEPROM-saved Grbl global settings back to defaults.
 PUB settings_restore({uint8_t} restore_flag) | {uint8_t}idx, {float}coord_data[N_AXIS]
@@ -145,8 +149,8 @@ PUB settings_read_build_info({char *}line)
 ' Read selected coordinate data from EEPROM. Updates pointed coord_data value.
 PUB settings_read_coord_data({uint8_t}coord_select, {float *}coord_data) | {uint32_t}addr
 
-    addr := coord_select * ({sizeof(float)}*N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
-    if (NOT(memcpy_from_eeprom_with_checksum(coord_data, addr, {sizeof(float)}*N_AXIS)))
+    addr := coord_select * ({sizeof(float)}4 * N_AXIS + 1) + EEPROM_ADDR_PARAMETERS
+    if (NOT(memcpy_from_eeprom_with_checksum(coord_data, addr, {sizeof(float)}4 * N_AXIS)))
         ' Reset with default zero vector
         clear_vector_float(coord_data)
         settings_write_coord_data(coord_select,coord_data)
@@ -160,7 +164,7 @@ PUB read_global_settings | version
     version := eeprom_get_char(0)
     if (version == SETTINGS_VERSION)
         ' Read settings-record and check checksum
-        if (NOT(memcpy_from_eeprom_with_checksum(@settings, EEPROM_ADDR_GLOBAL, {sizeof}settings_t)))
+        if (NOT(memcpy_from_eeprom_with_checksum(@settings, EEPROM_ADDR_GLOBAL, sizeof_settings_t)))
             return(FALSE)
     else 
         return(FALSE)

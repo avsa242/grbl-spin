@@ -26,7 +26,8 @@
   methods to accomodate their needs.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
+#include "con.report.spin"
 
 ' Internal report utilities to reduce flash with repetitive tasks turned into functions.
 PUB report_util_setting_prefix({byte }n)
@@ -49,7 +50,7 @@ PUB {static} report_util_gcode_modes_M
     printPgmString(PSTR(" M")) 'string(" M")?
 
 ' static  report_util_comment_line_feed 
-'     serial_write() report_util_line_feed; 
+'     serial_write() report_util_line_feed
 
 PUB {static} report_util_axis_values({float *}axis_value) | {uint8_t} idx
 
@@ -65,28 +66,28 @@ static  report_util_setting_string(byte n)
   serial_write()
   case(n) 
     
-    0: printPgmString(PSTR("stp pulse")) ;
-    1: printPgmString(PSTR("idl delay")) ; 
-    2: printPgmString(PSTR("stp inv")) ;
-    3: printPgmString(PSTR("dir inv")) ;
-    4: printPgmString(PSTR("stp en inv")) ;
-    5: printPgmString(PSTR("lim inv")) ;
-    6: printPgmString(PSTR("prb inv")) ;
-    10: printPgmString(PSTR("rpt")) ;
-    11: printPgmString(PSTR("jnc dev")) ;
-    12: printPgmString(PSTR("arc tol")) ;
-    13: printPgmString(PSTR("rpt inch")) ;
-    20: printPgmString(PSTR("sft lim")) ;
-    21: printPgmString(PSTR("hrd lim")) ;
-    22: printPgmString(PSTR("hm cyc")) ;
-    23: printPgmString(PSTR("hm dir inv")) ;
-    24: printPgmString(PSTR("hm feed")) ;
-    25: printPgmString(PSTR("hm seek")) ;
-    26: printPgmString(PSTR("hm delay")) ;
-    27: printPgmString(PSTR("hm pulloff")) ;
-    30: printPgmString(PSTR("rpm max")) ;
-    31: printPgmString(PSTR("rpm min")) ;
-    32: printPgmString(PSTR("laser")) ;
+    0: printPgmString(PSTR("stp pulse"))
+    1: printPgmString(PSTR("idl delay"))
+    2: printPgmString(PSTR("stp inv")) 
+    3: printPgmString(PSTR("dir inv")) 
+    4: printPgmString(PSTR("stp en inv")) 
+    5: printPgmString(PSTR("lim inv")) 
+    6: printPgmString(PSTR("prb inv")) 
+    10: printPgmString(PSTR("rpt")) 
+    11: printPgmString(PSTR("jnc dev")) 
+    12: printPgmString(PSTR("arc tol")) 
+    13: printPgmString(PSTR("rpt inch")) 
+    20: printPgmString(PSTR("sft lim")) 
+    21: printPgmString(PSTR("hrd lim")) 
+    22: printPgmString(PSTR("hm cyc")) 
+    23: printPgmString(PSTR("hm dir inv")) 
+    24: printPgmString(PSTR("hm feed")) 
+    25: printPgmString(PSTR("hm seek")) 
+    26: printPgmString(PSTR("hm delay")) 
+    27: printPgmString(PSTR("hm pulloff")) 
+    30: printPgmString(PSTR("rpm max")) 
+    31: printPgmString(PSTR("rpm min")) 
+    32: printPgmString(PSTR("laser")) 
     OTHER:
       n -= AXIS_SETTINGS_START_VAL
       byte idx:= 0
@@ -98,10 +99,10 @@ static  report_util_setting_string(byte n)
       serial_write(n+)
       case (idx) 
     
-        0: printPgmString(PSTR(":stp/mm")) ;
-        1: printPgmString(PSTR(":mm/min")) ;
-        2: printPgmString(PSTR(":mm/s^2")) ;
-        3: printPgmString(PSTR(":mm max")) ;
+        0: printPgmString(PSTR(":stp/mm")) 
+        1: printPgmString(PSTR(":mm/min")) 
+        2: printPgmString(PSTR(":mm/s^2")) 
+        3: printPgmString(PSTR(":mm max")) 
       
       
   
@@ -113,13 +114,13 @@ PUB {static} report_util_uint8_setting({uint8_t} n, {int} val)
 
     report_util_setting_prefix(n) 
     print_uint8_base10(val) 
-    report_util_line_feed ' report_util_setting_string(n); 
+    report_util_line_feed ' report_util_setting_string(n) 
 
 PUB {static} report_util_float_setting({uint8_t} n, {float} val, {uint8_t} n_decimal) 
 
     report_util_setting_prefix(n) 
     printFloat(val, n_decimal)
-    report_util_line_feed ' report_util_setting_string(n);
+    report_util_line_feed ' report_util_setting_string(n)
 
 ' Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
 ' For every incoming line, this method responds with an  for a successful command or an
@@ -131,7 +132,7 @@ PUB report_status_message({uint8_t} status_code)
 
     case(status_code) 
         STATUS_OK: ' STATUS_OK
-            printPgmString(PSTR("ok\r\n")) ;
+            printPgmString(PSTR("ok\r\n")) 
         OTHER:
             printPgmString(PSTR("error:"))
             print_uint8_base10(status_code)
@@ -155,27 +156,27 @@ PUB report_feedback_message({uint8_t} message_code)
     printPgmString(PSTR("[MSG:"))   'string("[MSG:")?
     case(message_code) 
         MESSAGE_CRITICAL_EVENT:
-            printPgmString(PSTR("Reset to continue")) ;
+            printPgmString(PSTR("Reset to continue")) 
         MESSAGE_ALARM_LOCK:
-            printPgmString(PSTR(" to unlock")) ;
+            printPgmString(PSTR(" to unlock")) 
         MESSAGE_ALARM_UNLOCK:
-            printPgmString(PSTR("Caution: Unlocked")) ;
+            printPgmString(PSTR("Caution: Unlocked")) 
         MESSAGE_ENABLED:
-            printPgmString(PSTR("Enabled")) ;
+            printPgmString(PSTR("Enabled")) 
         MESSAGE_DISABLED:
-            printPgmString(PSTR("Disabled")) ;
+            printPgmString(PSTR("Disabled")) 
         MESSAGE_SAFETY_DOOR_AJAR:
-            printPgmString(PSTR("Check Door")) ;
+            printPgmString(PSTR("Check Door")) 
         MESSAGE_CHECK_LIMITS:
-            printPgmString(PSTR("Check Limits")) ;
+            printPgmString(PSTR("Check Limits")) 
         MESSAGE_PROGRAM_END:
-            printPgmString(PSTR("Pgm End")) ;
+            printPgmString(PSTR("Pgm End")) 
         MESSAGE_RESTORE_DEFAULTS:
-            printPgmString(PSTR("Restoring defaults")) ;
+            printPgmString(PSTR("Restoring defaults")) 
         MESSAGE_SPINDLE_RESTORE:
-            printPgmString(PSTR("Restoring spindle")) ;
+            printPgmString(PSTR("Restoring spindle")) 
         MESSAGE_SLEEP_MODE:
-            printPgmString(PSTR("Sleeping")) ;
+            printPgmString(PSTR("Sleeping")) 
     report_util_feedback_line_feed
 
 ' Welcome message
@@ -297,7 +298,7 @@ PUB report_gcode_modes
         report_util_gcode_modes_M
         case (gc_state.modal.program_flow) 
             PROGRAM_FLOW_PAUSED : serial_write("0")
-            ' PROGRAM_FLOW_OPTIONAL_STOP : serial_write("1) ; // M1 is ignored and not supported.
+            ' PROGRAM_FLOW_OPTIONAL_STOP : serial_write("1)  // M1 is ignored and not supported.
             PROGRAM_FLOW_COMPLETED_M2, PROGRAM_FLOW_COMPLETED_M30: 
                 print_uint8_base10(gc_state.modal.program_flow)
 

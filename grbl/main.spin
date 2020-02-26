@@ -44,7 +44,10 @@ VAR
 #endif
 
 #include "settings.spin"
+#include "eeprom.spin"
 #include "protocol.spin"
+#include "report.spin"
+
 '#include "motion_control.spin"
 '#include "serial.spin"
 

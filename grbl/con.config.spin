@@ -600,8 +600,8 @@ CON
 ' is enabled. Make sure the constant values are exactly the same as the script solution.
 ' NOTE: When N_PIECES < 4, unused RPM_LINE and RPM_POINT defines are not required and omitted.
     N_PIECES                                = 4  ' Integer (1-4). Number of piecewise lines used in script solution.
-    RPM_MAX                                 = 11686.4  ' Max RPM of model. $30 > RPM_MAX will be limited to RPM_MAX.
-    RPM_MIN                                 = 202.5    ' Min RPM of model. $31 < RPM_MIN will be limited to RPM_MIN.
+    NONLIN_RPM_MAX                                 = 11686.4  ' Max RPM of model. $30 > RPM_MAX will be limited to RPM_MAX.
+    NONLIN_RPM_MIN                                 = 202.5    ' Min RPM of model. $31 < RPM_MIN will be limited to RPM_MIN.
     RPM_POINT12                             = 6145.4  ' Used N_PIECES >:=2. Junction point between lines 1 and 2.
     RPM_POINT23                             = 9627.8  ' Used N_PIECES >:=3. Junction point between lines 2 and 3.
     RPM_POINT34                             = 10813.9 ' Used N_PIECES := 4. Junction point between lines 3 and 4.

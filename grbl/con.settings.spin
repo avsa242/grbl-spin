@@ -19,8 +19,8 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#ifndef settings_h
-#define settings_h
+'#ifndef settings_h
+'#define settings_h
 
 '#include "core.con.grbl.spin"
 
@@ -130,4 +130,4 @@ VAR
 
     byte    settings[sizeof_settings_t]
 
-#endif
+'#endif
