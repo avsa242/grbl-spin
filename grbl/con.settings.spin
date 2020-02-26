@@ -95,35 +95,39 @@ CON
 ' Must be greater than the number of axis settings
     AXIS_SETTINGS_INCREMENT             = 10
 
-{{ Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
-typedef struct 
-    
-  ' Axis settings
-  long {float} steps_per_mm[N_AXIS]
-  long {float} max_rate[N_AXIS]
-  long {float} acceleration[N_AXIS]
-  long {float} max_travel[N_AXIS]
+' Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
 
-  ' Remaining Grbl settings
-  byte pulse_microseconds
-  byte step_invert_mask
-  byte dir_invert_mask
-  byte stepper_idle_lock_time ' If max value 255, steppers do not disable.
-  byte status_report_mask ' Mask to indicate desired report data.
-  long {float} junction_deviation
-  long {float} arc_tolerance
+CON                                                                                                              
 
-  long {float} rpm_max
-  long {float} rpm_min
+    'sizeof(
+    _float                              = 4
+    uint8_t                             = 1
+    uint16_t                            = 2
+    ')
 
-  byte flags  ' Contains default boolean settings
+    steps_per_mm                        = 0
+    max_rate                            = steps_per_mm + (N_AXIS*_float)
+    acceleration                        = max_rate + (N_AXIS*_float)
+    max_travel                          = acceleration + (N_AXIS*_float)
+    pulse_microseconds                  = max_travel + (N_AXIS*_float)
+    step_invert_mask                    = pulse_microseconds + uint8_t
+    dir_invert_mask                     = step_invert_mask + uint8_t
+    stepper_idle_lock_time              = dir_invert_mask + uint8_t
+    status_report_mask                  = stepper_idle_lock_time + uint8_t
+    junction_deviation                  = status_report_mask + uint8_t
+    arc_tolerance                       = junction_deviation + _float
+    rpm_max                             = arc_tolerance + _float
+    rpm_min                             = rpm_max + _float
+    flags                               = rpm_min + _float
+    homing_dir_mask                     = flags + uint8_t
+    homing_feed_rate                    = homing_dir_mask + uint8_t
+    homing_seek_rate                    = homing_feed_rate + _float
+    homing_debounce_delay               = homing_seek_rate + _float
+    homing_pulloff                      = homing_debounce_delay + uint16_t
+    sizeof_settings_t                   = (homing_pulloff + _float) + 1
 
-  byte homing_dir_mask
-  long {float} homing_feed_rate
-  long {float} homing_seek_rate
-  word uint16_t homing_debounce_delay
-  long {float} homing_pulloff
- settings_t
-extern settings_t settings
-}}
+VAR
+
+    byte    settings[sizeof_settings_t]
+
 #endif

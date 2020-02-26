@@ -49,4 +49,39 @@ CON
     PL_COND_SPINDLE_MASK            = (PL_COND_FLAG_SPINDLE_CW | PL_COND_FLAG_SPINDLE_CCW)
     PL_COND_ACCESSORY_MASK          = (PL_COND_FLAG_SPINDLE_CW | PL_COND_FLAG_SPINDLE_CCW | PL_COND_FLAG_COOLANT_FLOOD | PL_COND_FLAG_COOLANT_MIST)
 
+CON
+
+    uint32_t                        = 4
+    uint8_t                         = 1
+    int32_t                         = 4
+    _float                          = 4
+
+    'plan_block_t
+    steps                           = 0
+    step_event_count                = steps + (N_AXIS * uint32_t)
+    direction_bits                  = step_event_count + uint32_t
+    condition                       = direction_bits + uint8_t
+    block_line_number               = condition + uint8_t           'conditionally compiled orig.
+    entry_speed_sqr                 = line_number + int32_t
+    max_entry_speed_sqr             = entry_speed_sqr + _float
+    acceleration                    = max_entry_speed_sqr + _float
+    millimeters                     = acceleration + _float
+    max_junction_speed_sqr          = millimeters + _float
+    rapid_rate                      = max_junction_speed_sqr + _float
+    programmed_rate                 = rapid_rate + _float
+    spindle_speed                   = programmed_rate + _float      'conditionally compiled orig.
+    sizeof_plan_block_t             = (spindle_speed + _float) + 1
+
+    'plan_line_data_t
+    feed_rate                       = 0
+    spindle_speed                   = feed_rate + _float
+    condition                       = spindle_speed + _float
+    data_line_number                = condition + uint8_t           'namespace collision with plan_block_t line_number; conditionally compiled orig.
+    sizeof_plan_line_data_t         = (data_line_number + int32_t) + 1
+
+VAR
+
+    byte plan_block_t[sizeof_plan_block_t]
+    byte plan_line_data_t[sizeof_plan_line_data_t]
+
 #endif

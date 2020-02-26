@@ -177,85 +177,65 @@ CON
     GC_PARSER_LASER_DISABLE             = 1 << 6
     GC_PARSER_LASER_ISMOTION            = 1 << 7
 
-{{
-' NOTE: When this struct is zeroed, the above defines set the defaults for the system.
-typedef struct 
-    
-  byte motion          ' 
-    G0,G1,G2,G3,G38.2,G80
-  byte feed_rate       ' 
-    G93,G94
-  byte units           ' 
-    G20,G21
-  byte distance        ' 
-    G90,G91
-  ' byte distance_arc // 
-    G91.1 NOTE: Don't track. Only default supported.
-  byte plane_select    ' 
-    G17,G18,G19
-  ' byte cutter_comp  // 
-    G40 NOTE: Don't track. Only default supported.
-  byte tool_length     ' 
-    G43.1,G49
-  byte coord_select    ' 
-    G54,G55,G56,G57,G58,G59
-  ' byte control      // 
-    G61 NOTE: Don't track. Only default supported.
-  byte program_flow    ' 
-    M0,M1,M2,M30
-  byte coolant         ' 
-    M7,M8,M9
-  byte spindle         ' 
-    M3,M4,M5
-  byte override        ' 
-    M56
- gc_modal_t
-}}
+CON
 
-{{
-typedef struct 
-    
-  {float} f         ' Feed
-  {float} ijk[3]    ' I,J,K Axis arc offsets
-  byte l       ' G10 or canned cycles parameters
-  long n       ' Line number
-  {float} p         ' G10 or dwell parameters
-  ' {float} q      // G82 peck drilling
-  {float} r         ' Arc radius
-  {float} s         ' Spindle speed
-  byte t       ' Tool selection
-  {float} xyz[3]    ' X,Y,Z Translational axes
- gc_values_t
-}}
+    'sizeof(
+    _float                              = 4
+    uint8_t                             = 1
+    int32_t                             = 4
+    ')
 
-{{
-typedef struct 
-    
-  gc_modal_t modal
+    'gc_modal_t
+    motion                              = 0
+    feed_rate_param                     = motion + uint8_t
+    units                               = feed_rate + uint8_t
+    distance                            = units + uint8_t
+    plane_select                        = distance + uint8_t
+    tool_length                         = plane_select + uint8_t
+    coord_select                        = tool_length + uint8_t
+    program_flow                        = coord_select + uint8_t
+    coolant                             = program_flow + uint8_t
+    spindle                             = coolant + uint8_t
+    override                            = spindle + uint8_t
+    sizeof_gc_modal_t                   = (override + uint8_t) + 1
 
-  {float} spindle_speed          ' RPM
-  {float} feed_rate              ' Millimeters/min
-  byte tool                 ' Tracks tool number. NOT USED.
-  long line_number          ' Last line number sent
+    'gc_values_t
+    f                                   = 0
+    ijk                                 = f + _float
+    l                                   = ijk + (_float*3)
+    n                                   = l + uint8_t
+    p                                   = n + int32_t
+    r                                   = p + _float
+    s                                   = r + _float
+    t                                   = s + _float
+    xyz                                 = t + uint8_t
+    sizeof_gc_values_t                  = xyz + (_float*3) + 1
 
-  {float} position[N_AXIS]       ' Where the interpreter considers the tool to be at this point in the code
+    'parser_state_t
+    modal                               = 0 'gc_modal_t
+    spindle_speed                       = modal + sizeof_gc_modal_t
+    feed_rate                           = spindle_speed + _float
+    tool                                = feed_rate + _float
+    line_number                         = tool + uint8_t
+    position                            = line_number + int32_t
+    coord_system                        = position + (N_AXIS * _float)
+    coord_offset                        = coord_system + (N_AXIS * _float)
+    tool_length_offset                  = coord_offset + (N_AXIS * _float)
+    sizeof_parser_state_t               = (tool_length_offset + _float) + 1
 
-  {float} coord_system[N_AXIS]    ' Current work coordinate system (G54+). Stores offset from absolute machine
-                                 ' position in mm. Loaded from EEPROM when called.
-  {float} coord_offset[N_AXIS]    ' Retains the G92 coordinate offset (work coordinates) relative to
-                                 ' machine zero in mm. Non-persistent. Cleared upon reset and boot.
-  {float} tool_length_offset      ' Tracks tool length offset value when enabled.
- parser_state_t
-}}
-'extern parser_state_t gc_state
 
-{{
-typedef struct 
-    
-  byte non_modal_command
-  gc_modal_t modal
-  gc_values_t values
- parser_block_t
-}}
+    'parser_block_t
+    non_modal_command                   = 0
+    block_modal                         = non_modal_command + uint8_t 'namespace conflict with modal in parser_state_t
+    values                              = block_modal + sizeof_gc_modal_t
+    sizeof_parser_block_t               = (values + sizeof_gc_values_t) + 1
+
+VAR
+
+    byte gc_modal_t[sizeof_gc_modal_t]
+    byte gc_values_t[sizeof_gc_values_t]
+    byte parser_state_t[sizeof_parser_state_t]
+    byte parser_block_t[sizeof_parser_block_t]
+
 
 #endif

@@ -29,7 +29,7 @@
 
 VAR
 
-    byte {static char} line[LINE_BUFFER_SIZE] ' Line to be executed. Zero-terminated.
+    byte {static char} exec_line[LINE_BUFFER_SIZE] ' Line to be executed. Zero-terminated.
     'static  protocol_exec_rt_suspend   '???????
 
 {{
@@ -59,7 +59,7 @@ PUB protocol_main_loop | {uint8_t} line_flags, char_counter, c
             bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR)
             protocol_execute_realtime ' Enter safety door mode. Should return as IDLE state.
         ' All systems go!
-        system_execute_startup(line) ' Execute startup script.
+        system_execute_startup(exec_line) ' Execute startup script.
 
   ' ---------------------------------------------------------------------------------
   ' Primary loop! Upon a system abort, this exits back to main to reset the system.
@@ -77,27 +77,27 @@ PUB protocol_main_loop | {uint8_t} line_flags, char_counter, c
                 protocol_execute_realtime ' Runtime command check point.
                 if (sys.abort)
                     return  ' Bail to calling function upon system abort
-                line[char_counter] := 0 ' Set string termination character.
+                exec_line[char_counter] := 0 ' Set string termination character.
 #ifdef REPORT_ECHO_LINE_RECEIVED
-                report_echo_line_received(line)
+                report_echo_line_received(exec_line)
 #endif
 
         ' Direct and execute one line of formatted input, and report status of execution.
                 if (line_flags & LINE_FLAG_OVERFLOW)
                     ' Report line overflow error.
                     report_status_message(STATUS_OVERFLOW)
-                elseif (line[0] == 0)
+                elseif (exec_line[0] == 0)
                     ' Empty or comment line. For syncing purposes.
                     report_status_message(STATUS_OK)
-                elseif (line[0] == "$")
+                elseif (exec_line[0] == "$")
                     ' Grbl  system command
-                    report_status_message(system_execute_line(line))
+                    report_status_message(system_execute_line(exec_line))
                 elseif (sys.state & (STATE_ALARM | STATE_JOG))
                     ' Everything else is gcode. Block if in alarm or jog mode.
                     report_status_message(STATUS_SYSTEM_GC_LOCK)
                 else
                     ' Parse and execute g-code block.
-                    report_status_message(gc_execute_line(line))
+                    report_status_message(gc_execute_line(exec_line))
                 ' Reset tracking data for next line.
                 line_flags := 0
                 char_counter := 0
@@ -134,9 +134,9 @@ PUB protocol_main_loop | {uint8_t} line_flags, char_counter, c
                         ' Detect line buffer overflow and set flag.
                         line_flags |= LINE_FLAG_OVERFLOW
                     elseif (c => "a" AND c =< "z")  ' Upcase lowercase
-                        line[char_counter++] := c-"a" + "A"
+                        exec_line[char_counter++] := c-"a" + "A"
                     else
-                        line[char_counter++] := c
+                        exec_line[char_counter++] := c
             ' If there are no more characters in the serial read buffer to be processed and executed,
             ' this indicates that g-code streaming has either filled the planner buffer or has
             ' completed. In either case, auto-cycle start, if enabled, any queued moves.

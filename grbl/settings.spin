@@ -20,7 +20,7 @@
 }}
 
 '#include "core.con.grbl.spin"
-'#include "settings_t.spin"
+#include "settings_t.spin"
 
 ' XXX write to EEPROM
 {{settings_t settings

@@ -28,7 +28,6 @@ CON
 
 #include "core.con.grbl.spin"
 
-
 VAR
 
     ' Declare system global variable structure
@@ -45,8 +44,9 @@ VAR
 #endif
 
 #include "settings.spin"
-#include "motion_control.spin"
-#include "serial.spin"
+#include "protocol.spin"
+'#include "motion_control.spin"
+'#include "serial.spin"
 
 PUB Main | {uint8_t} prior_state
 
