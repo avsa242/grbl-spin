@@ -23,8 +23,8 @@
    only the Arduino Mega328p. }}
 
 
-#ifndef cpu_map_h
-#define cpu_map_h
+'#ifndef cpu_map_h
+'#define cpu_map_h
 
 {{
 #ifdef CPU_MAP_CUSTOM_PROC
@@ -103,7 +103,7 @@ CON
     PROBE_BIT                               = 21    '5  ' Uno Analog Pin 5
     PROBE_MASK                              = (1<<PROBE_BIT)
 
-#ifndef ENABLE_DUAL_AXIS
+'#ifndef ENABLE_DUAL_AXIS
 
 ' Define flood and mist coolant enable output pins.
     COOLANT_FLOOD_DDR                       = 0   'DDRC
@@ -147,12 +147,13 @@ CON
     SPINDLE_COMB_BIT                        = 0 'COM2A1
 
 ' Prescaled, 8-bit Fast PWM mode.
-    SPINDLE_TCCRA_INIT_MASK                 = ((1<<WGM20) | (1<<WGM21))  ' Configures fast PWM mode.
+    SPINDLE_TCCRA_INIT_MASK                 = 0 'PLACEHOLDER
+'    SPINDLE_TCCRA_INIT_MASK                 = ((1<<WGM20) | (1<<WGM21))  ' Configures fast PWM mode.
 '    SPINDLE_TCCRB_INIT_MASK                 = (1<<CS20)               // Disable prescaler -> 62.5kHz
 '    SPINDLE_TCCRB_INIT_MASK                 = (1<<CS21)               // 1/8 prescaler -> 7.8kHz (Used in v0.9)
 '    SPINDLE_TCCRB_INIT_MASK                 = ((1<<CS21) | (1<<CS20)) // 1/32 prescaler -> 1.96kHz
-    SPINDLE_TCCRB_INIT_MASK                 = (1<<CS22)               ' 1/64 prescaler -> 0.98kHz (J-tech laser)
-
+'    SPINDLE_TCCRB_INIT_MASK                 = (1<<CS22)               ' 1/64 prescaler -> 0.98kHz (J-tech laser)
+    SPINDLE_TCCRB_INIT_MASK                 = 0 'PLACEHOLDER
 ' NOTE: On the 328p, these must be the same as the SPINDLE_ENABLE settings.
     SPINDLE_PWM_DDR                         = 0 'DDRB
     SPINDLE_PWM_PORT                        = 0 'PORTB
@@ -211,7 +212,7 @@ CON
     SPINDLE_COMB_BIT                        = 0   'COM2A1
 
 ' Prescaled, 8-bit Fast PWM mode.
-    SPINDLE_TCCRA_INIT_MASK                 = ((1<<WGM20) | (1<<WGM21))  ' Configures fast PWM mode.
+'    SPINDLE_TCCRA_INIT_MASK                 = ((1<<WGM20) | (1<<WGM21))  ' Configures fast PWM mode.
 '    SPINDLE_TCCRB_INIT_MASK                 = (1<<CS20)               // Disable prescaler -> 62.5kHz
 '    SPINDLE_TCCRB_INIT_MASK                 = (1<<CS21)               // 1/8 prescaler -> 7.8kHz (Used in v0.9)
 '    SPINDLE_TCCRB_INIT_MASK                 =((1<<CS21) | (1<<CS20)) // 1/32 prescaler -> 1.96kHz
@@ -251,6 +252,7 @@ CON
     SPINDLE_ENABLE_PORT                     = 0   'PORTC
     SPINDLE_ENABLE_BIT                      = 19  '3  ' Uno Analog Pin 3
 #endif
+'#endif
 #endif
-#endif
-#endif
+
+'#endif

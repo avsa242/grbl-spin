@@ -19,7 +19,14 @@
 }}
 
 #include "core.con.grbl.spin"
-#include "system_t.spin"
+'#include "system_t.spin"
+'#include "con.config.spin"
+'#include "con.cpu_map.spin"
+'#include "con.coolant_control.spin"
+'#include "con.planner.spin"
+OBJ
+
+    nb  : "nuts_bolts"
 
 VAR
 
@@ -28,9 +35,9 @@ VAR
 PUB coolant_init(addr)
 
     sys := addr
-    COOLANT_FLOOD_DDR |= (1 << COOLANT_FLOOD_BIT) ' Configure as output pin
+    dira |= (1 << COOLANT_FLOOD_BIT) ' Configure as output pin
 #ifdef ENABLE_M7
-    COOLANT_MIST_DDR |= (1 << COOLANT_MIST_BIT)
+    dira |= (1 << COOLANT_MIST_BIT)
 #endif
     coolant_stop
 
@@ -39,17 +46,17 @@ PUB{uint8_t} coolant_get_state | {uint8_t}cl_state
 
     cl_state := COOLANT_STATE_DISABLE
 #ifdef INVERT_COOLANT_FLOOD_PIN
-    if (bit_isfalse(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT)))
+    if (nb.bit_isfalse(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT)))
 #else
-    if (bit_istrue(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT)))
+    if (nb.bit_istrue(COOLANT_FLOOD_PORT, (1 << COOLANT_FLOOD_BIT)))
 #endif
         cl_state |= COOLANT_STATE_FLOOD
   
 #ifdef ENABLE_M7
 #ifdef INVERT_COOLANT_MIST_PIN
-    if (bit_isfalse(COOLANT_MIST_PORT, (1 << COOLANT_MIST_BIT)))
+    if (nb.bit_isfalse(COOLANT_MIST_PORT, (1 << COOLANT_MIST_BIT)))
 #else
-    if (bit_istrue(COOLANT_MIST_PORT, (1 << COOLANT_MIST_BIT)))
+    if (nb.bit_istrue(COOLANT_MIST_PORT, (1 << COOLANT_MIST_BIT)))
 #endif
         cl_state |= COOLANT_STATE_MIST
 #endif

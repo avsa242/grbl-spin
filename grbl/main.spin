@@ -18,6 +18,8 @@
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }
+#define CPU_MAP_P8X32A
+
 CON
 
     _clkmode    = xtal1 + pll16x
@@ -27,7 +29,7 @@ CON
     'F_CPU       = CLK_FREQ
 
 #include "core.con.grbl.spin"
-#include "system_t.spin"
+'#include "system_t.spin"
 
 OBJ
 

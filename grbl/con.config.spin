@@ -37,7 +37,6 @@
 #define DEFAULTS_GENERIC
 '#define CPU_MAP_ATMEGA328P  ' Arduino Uno CPU
 #define CPU_MAP_P8X32A      'Parallax Propeller 1/P8X32A CPU
-
 CON
 ' Serial baud rate
 ' #define BAUD_RATE 230400

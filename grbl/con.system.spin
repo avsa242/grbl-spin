@@ -18,8 +18,8 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#ifndef system_h
-#define system_h
+'#ifndef system_h
+'#define system_h
 
 '#include "core.con.grbl.spin"
 
@@ -124,6 +124,33 @@ CON
     SPINDLE_STOP_OVR_RESTORE_CYCLE          = 1 << 3
 
 
+CON
+'   system_t
+    _float                                  = 4
+    uint8_t                                 = 1
+
+    state                                   = 0
+    sysabort                                = state + uint8_t
+    suspend                                 = sysabort + uint8_t
+    soft_limit                              = suspend + uint8_t
+    step_control                            = soft_limit + uint8_t
+    probe_succeeded                         = step_control + uint8_t
+    homing_axis_lock                        = probe_succeeded + uint8_t
+    homing_axis_lock_dual                   = homing_axis_lock + uint8_t
+    f_override                              = homing_axis_lock_dual + uint8_t
+    r_override                              = f_override + uint8_t
+    spindle_speed_ovr                       = r_override + uint8_t
+    spindle_stop_ovr                        = spindle_speed_ovr + uint8_t
+    report_ovr_counter                      = spindle_stop_ovr + uint8_t
+    report_wco_counter                      = report_ovr_counter + uint8_t
+    override_ctrl                           = report_wco_counter + uint8_t
+    spindle_speed                           = override_ctrl + uint8_t
+    sizeof_system_t                         = (spindle_speed + _float) + 1
+
+'VAR
+
+'    byte sys[sizeof_system_t]
+
 {{
 ' Define global system variables
 typedef struct 
@@ -163,9 +190,9 @@ extern {void}  byte sys_rt_exec_alarm   ' Global realtime executor bitflag varia
 extern {void}  byte sys_rt_exec_motion_override ' Global realtime executor bitflag variable for motion-based overrides.
 extern {void}  byte sys_rt_exec_accessory_override ' Global realtime executor bitflag variable for spindle/coolant overrides.
 }}
-#ifdef DEBUG
-    EXEC_DEBUG_REPORT               = 1 << 0
-VAR {extern} {void}  byte sys_rt_exec_debug
-#endif
+'#ifdef DEBUG
+'    EXEC_DEBUG_REPORT               = 1 << 0
+'VAR {extern} {void}  byte sys_rt_exec_debug
+'#endif
 
-#endif
+'#endif

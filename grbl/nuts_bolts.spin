@@ -20,12 +20,20 @@
 }}
 
 '#include "core.con.grbl.spin"
+#include "con.nuts_bolts.spin"
 #include "con.config.spin"
-#include "system.spin"
+#include "con.system.spin"
 
 ' Maximum number of digits in int32 (and float)
 #define MAX_INT_DIGITS 8
 
+OBJ
+
+'    proto  : "protocol"
+
+VAR
+
+    byte sys[sizeof_system_t]
 
 PUB ceil(val)
 'dummy method
@@ -114,10 +122,10 @@ PUB delay_sec({float} seconds, {uint8_t} mode) | {uint16} i
 		if (sys[sysabort])
             return
 		if (mode == DELAY_MODE_DWELL)
-			protocol_execute_realtime
+			proto.protocol_execute_realtime
 		else ' DELAY_MODE_SYS_SUSPEND
 		  ' Execute rt_system only to a nesting suspend loops.
-		  protocol_exec_rt_system
+		  proto.protocol_exec_rt_system
 		  if (sys[suspend] & SUSPEND_RESTART_RETRACT)
             return ' Bail, if safety door reopens.
 		_delay_ms(DWELL_TIME_STEP) ' Delay DWELL_TIME_STEP increment
