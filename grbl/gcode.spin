@@ -36,6 +36,7 @@
 OBJ
 
     settings    : "settings.spin"
+    jog         : "jog"
 
 #include "parser_state_t.spin"  'provides var named gc_state
 
@@ -855,7 +856,7 @@ i
         pl_data->spindle_speed := gc_state.spindle_speed
         plan_data.condition := (gc_state.modal.spindle | gc_state.modal.coolant)
 
-        status := jog_execute(@plan_data, @gc_block)
+        status := jog.jog_execute(@plan_data, @gc_block)
         if (status == STATUS_OK)
             memcpy(gc_state.position, gc_block.values.xyz, {sizeof}gc_block.values.xyz)
         return(status)
