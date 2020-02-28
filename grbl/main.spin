@@ -53,7 +53,10 @@ OBJ
 
 VAR
 
-    byte    sys[sizeof_system_t]    'system_t struct
+    byte    sys[sizeof_system_t]                'system_t struct
+    byte    pl_data[sizeof_plan_line_data_t]    'plan_line_data_t struct
+    byte    gc_block[sizeof_parser_block_t]     'parser_block_t struct
+    byte    values[sizeof_gc_values_t]          'gc_values_t struct
 
 VAR
 

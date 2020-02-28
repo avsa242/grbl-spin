@@ -20,6 +20,17 @@
 
 #include "core.con.grbl.spin"
 
+VAR
+
+    long ptr_sys        'pointer to the system_t struct defined in main
+    long ptr_pl_data    'pointer to the pl_data struct defined in main
+    long ptr_gc_block   'pointer to the gc_block struct defined in main
+    long ptr_values     'pointer to the gc_values struct defined in main
+
+PUB Init(sys_addr, pl_data_addr, gc_block_addr, values_addr)
+' Set the ptr_ VARs to the addresses of the structures, defined in the main object
+    longmove(@ptr_sys, @sys_addr, 4)
+
 ' Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.
 PUB{uint8_t} jog_execute({plan_line_data_t *}pl_data, {parser_block_t *}gc_block)
 
