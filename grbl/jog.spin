@@ -18,8 +18,8 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
-
+'#include "core.con.grbl.spin"
+#include "
 VAR
 
     long ptr_sys        'pointer to the system_t struct defined in main

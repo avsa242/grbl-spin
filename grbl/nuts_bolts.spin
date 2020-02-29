@@ -29,7 +29,7 @@
 
 OBJ
 
-'    proto  : "protocol"
+    proto  : "protocol"
 
 VAR
 
@@ -225,9 +225,9 @@ PUB isequal_position_vector(a, b)
 '#define isequal_position_vector(a,b) !(memcmp(a, b, {sizeof(float)}*N_AXIS))
 
 ' Bit field and masking macros
-PUB bit(n)
+PUB bit(num)
 
-    return 1 << n
+    return 1 << num
 
 PUB bit_true(x, mask)
 

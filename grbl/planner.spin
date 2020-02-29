@@ -20,28 +20,25 @@
   along with Grbl.  If not, see <http:'www.gnu.org/licenses/>.
 }}
 
-#include "core.con.grbl.spin"
+'#include "core.con.grbl.spin"
+'#include "con.nuts_bolts.spin"
+#include "structs.spin"
+#include "con.planner.spin"
+#include "nuts_bolts.spin"
+'OBJ
+
+'    nb  : "nuts_bolts"
 
 VAR
 
-    {static plan_block_t } block_buffer[BLOCK_BUFFER_SIZE]  ' A ring buffer for motion instructions
-    {static } byte block_buffer_tail     ' Index of the block to process now
-    {static } byte block_buffer_head     ' Index of the next block to be pushed
-    {static } byte next_buffer_head      ' Index of the next buffer head
-    {static } byte block_buffer_planned  ' Index of the optimally planned block
+    byte block_buffer[sizeof_plan_block_t * BLOCK_BUFFER_SIZE]  ' A ring buffer for motion instructions
+    byte block_buffer_tail     ' Index of the block to process now
+    byte block_buffer_head     ' Index of the next block to be pushed
+    byte next_buffer_head      ' Index of the next buffer head
+    byte block_buffer_planned  ' Index of the optimally planned block
 
-VAR
 ' Define planner variables
-    'typedef struct 
-    long pl
-    long position[N_AXIS]          ' The planner position of the tool in absolute steps. Kept separate
-                                     ' from g-code position for movements requiring multiple line motions,
-                                     ' i.e. arcs, canned cycles, and backlash compensation.
-  {float}long previous_unit_vec[N_AXIS]   ' Unit vector of previous path line segment
-  {float}long previous_nominal_speed  ' Nominal speed of previous path line segment
-' planner_t
-'static planner_t pl
-
+    byte pl[sizeof_planner_t]
 
 ' Returns the index of the next block in the ring buffer. Also called by stepper segment buffer.
 PUB{uint8_t} plan_next_block_index({uint8_t} block_index)
@@ -124,13 +121,13 @@ PUB{static uint8_t } plan_prev_block_index({uint8_t} block_index)
   ARM versions should have enough memory and speed for look-ahead blocks numbering up to a hundred or more.
 
 }}
-PUB{static void} planner_recalculate | {uint8_t}block_index, {float}entry_speed_sqr, {plan_block_t *} next_block, current
+PUB{static void} planner_recalculate | {uint8_t}block_index, {float}curr_entry_speed_sqr, {plan_block_t *} next_block[sizeof_plan_block_t/4], current[sizeof_plan_block_t/4]
 
     ' Initialize block index to the last block in the planner buffer.
     block_index := plan_prev_block_index(block_buffer_head)
 
     ' Bail. Can't do anything with one only one plan-able block.
-    if (block_index== block_buffer_planned) 
+    if (block_index == block_buffer_planned) 
         return 
     ' Reverse Pass: Coarsely maximize all possible deceleration curves back-planning from the last
     ' block in buffer. Cease planning when the last optimal planned or tail pointer is reached.
@@ -138,7 +135,7 @@ PUB{static void} planner_recalculate | {uint8_t}block_index, {float}entry_speed_
     {plan_block_t *}current := @block_buffer[block_index]
 
     ' Calculate maximum entry speed for last block in buffer, where the exit speed is always zero.
-    current->entry_speed_sqr := min(current->max_entry_speed_sqr, 2*current->acceleration*current->millimeters)
+    byte[current][curr_entry_speed_sqr] := nb.min_(byte[current][max_entry_speed_sqr], 2*byte[current][acceleration] * byte[current][millimeters])
 
     block_index := plan_prev_block_index(block_index)
     if (block_index == block_buffer_planned) ' Only two plannable blocks in buffer. Reverse pass complete.
@@ -155,12 +152,12 @@ PUB{static void} planner_recalculate | {uint8_t}block_index, {float}entry_speed_
                 if (block_index== block_buffer_tail)
                     st_update_plan_block_parameters 
                 ' Compute maximum entry speed decelerating over the current block from its exit speed.
-                if (current->entry_speed_sqr <> current->max_entry_speed_sqr)
-                    entry_speed_sqr := next_block->entry_speed_sqr + 2*current->acceleration*current->millimeters
-                    if (entry_speed_sqr < current->max_entry_speed_sqr) 
-                        current->entry_speed_sqr:= entry_speed_sqr
+                if (byte[current][entry_speed_sqr] <> byte[current][max_entry_speed_sqr])
+                    entry_speed_sqr := byte[next_block][entry_speed_sqr] + 2*byte[current][acceleration]*byte[current][millimeters]
+                    if (entry_speed_sqr < byte[current][max_entry_speed_sqr])
+                        byte[current][entry_speed_sqr] := entry_speed_sqr
                     else 
-                        current->entry_speed_sqr:= current->max_entry_speed_sqr
+                        byte[current][entry_speed_sqr] := byte[current][max_entry_speed_sqr]
 
     ' Forward Pass: Forward plan the acceleration curve from the planned pointer onward.
     ' Also scans for optimal plan points and appropriately updates the planned pointer.
@@ -173,20 +170,20 @@ PUB{static void} planner_recalculate | {uint8_t}block_index, {float}entry_speed_
         ' Any acceleration detected in the forward pass automatically moves the optimal planned
         ' pointer forward, since everything before this is all optimal. In other words, nothing
         ' can improve the plan from the buffer tail to the planned pointer by logic.
-        if (current->entry_speed_sqr < next_block->entry_speed_sqr) 
-            entry_speed_sqr := current->entry_speed_sqr + 2*current->acceleration*current->millimeters
+        if (byte[current][entry_speed_sqr] < byte[next_block][entry_speed_sqr])
+            entry_speed_sqr := byte[current][entry_speed_sqr] + 2*byte[current][acceleration]*byte[current][millimeters]
             ' If true, current block is full-acceleration and we can move the planned pointer forward.
-            if (entry_speed_sqr < next_block->entry_speed_sqr) 
-                next_block->entry_speed_sqr := entry_speed_sqr ' Always =< max_entry_speed_sqr. Backward pass sets this.
+            if (entry_speed_sqr < byte[next_block][entry_speed_sqr])
+                byte[next_block][entry_speed_sqr] := entry_speed_sqr ' Always =< max_entry_speed_sqr. Backward pass sets this.
                 block_buffer_planned := block_index ' Set optimal plan pointer.
 
         ' Any block set at its maximum entry speed also creates an optimal plan up to this
         ' point in the buffer. When the plan is bracketed by either the beginning of the
         ' buffer and a maximum entry speed or two maximum entry speeds, every block in between
         ' cannot logically be further improved. Hence, we don't have to recompute them anymore.
-        if (next_block->entry_speed_sqr == next_block->max_entry_speed_sqr) 
+        if (byte[next_block][entry_speed_sqr] == byte[next_block][max_entry_speed_sqr])
             block_buffer_planned := block_index 
-        block_index:= plan_next_block_index(block_index)
+        block_index := plan_next_block_index(block_index)
 
 PUB plan_reset
 
@@ -240,14 +237,14 @@ PUB{uint8_t} plan_check_full_buffer
 ' NOTE: All system motion commands, such as homing/parking, are not subject to overrides.
 PUB {float} plan_compute_profile_nominal_speed({plan_block_t *}block) | {float}nominal_speed
 
-    nominal_speed := block->programmed_rate
-    if (block->condition & PL_COND_FLAG_RAPID_MOTION) 
+    nominal_speed := byte[block][programmed_rate]
+    if (byte[block][condition] & PL_COND_FLAG_RAPID_MOTION) 
         nominal_speed *= (0.01*sys.r_override) 
     else 
-        if (NOT(block->condition & PL_COND_FLAG_NO_FEED_OVERRIDE)) 
+        if (NOT(byte[block][condition] & PL_COND_FLAG_NO_FEED_OVERRIDE)) 
             nominal_speed *= (0.01*sys.f_override) 
-        if (nominal_speed > block->rapid_rate) 
-            nominal_speed := block->rapid_rate 
+        if (nominal_speed > byte[block][rapid_rate])
+            nominal_speed := byte[block][rapid_rate]
     if (nominal_speed > MINIMUM_FEED_RATE)
         return(nominal_speed)
     return(MINIMUM_FEED_RATE)
@@ -257,18 +254,18 @@ PUB {float} plan_compute_profile_nominal_speed({plan_block_t *}block) | {float}n
 PUB{static} plan_compute_profile_parameters({plan_block_t *}block, {float}nominal_speed, {float}prev_nominal_speed)
   ' Compute the junction maximum entry based on the minimum of the junction speed and neighboring nominal speeds.
     if (nominal_speed > prev_nominal_speed)
-        block->max_entry_speed_sqr := prev_nominal_speed*prev_nominal_speed
+        byte[block][max_entry_speed_sqr] := prev_nominal_speed*prev_nominal_speed
     else
-        block->max_entry_speed_sqr := nominal_speed*nominal_speed
-    if (block->max_entry_speed_sqr > block->max_junction_speed_sqr)
-        block->max_entry_speed_sqr := block->max_junction_speed_sqr
+        byte[block][max_entry_speed_sqr] := nominal_speed*nominal_speed
+    if (byte[block][max_entry_speed_sqr] > byte[block][max_junction_speed_sqr])
+        byte[block][max_entry_speed_sqr] := byte[block][max_junction_speed_sqr]
 
 ' Re-calculates buffered motions profile parameters upon a motion-based override change.
 PUB plan_update_velocity_profile_parameters | {uint8_t} block_index, {plan_block_t *}block, {float}nominal_speed, {float}prev_nominal_speed
 
     block_index := block_buffer_tail
     prev_nominal_speed := SOME_LARGE_VALUE ' Set high for first block nominal speed calculation.
-    repeat while (block_index <> block_buffer_head) 
+    repeat while (block_index <> block_buffer_head)
         block := @block_buffer[block_index]
         nominal_speed := plan_compute_profile_nominal_speed(block)
         plan_compute_profile_parameters(block, nominal_speed, prev_nominal_speed)
@@ -291,17 +288,17 @@ PUB plan_update_velocity_profile_parameters | {uint8_t} block_index, {plan_block
    motions are still planned correctly, repeat while the stepper module only points to the block buffer head
    to execute the special system motion. }}
 
-PUB{uint8_t} plan_buffer_line({float *}target, {plan_line_data_t *}pl_data) | {plan_block_t *}block, {int32_t}target_steps[N_AXIS], {int32_t}position_steps[N_AXIS], {float}unit_vec[N_AXIS], delta_mm, {uint8_t}idx, {float}, {float}junction_unit_vec[N_AXIS], junction_cos_theta, junction_acceleration, sin_theta_d2, nominal_speed
+PUB{uint8_t} plan_buffer_line({float *}target, {plan_line_data_t *}pl_data) | {plan_block_t *}block, {int32_t}target_steps[N_AXIS], {int32_t}position_steps[N_AXIS], {float}unit_vec[N_AXIS], delta_mm, {uint8_t}idx, {float}junction_unit_vec[N_AXIS], junction_cos_theta, junction_acceleration, sin_theta_d2, nominal_speed
 
   ' Prepare and initialize new block. Copy relevant pl_data for block execution.
     block := @block_buffer[block_buffer_head]
     bytefill(block, 0, {sizeof}plan_block_t) ' Zero all block values.
-    block->condition := pl_data->condition
+    byte[block][condition] := byte[pl_data][condition]
 #ifdef VARIABLE_SPINDLE
-    block->spindle_speed := pl_data->spindle_speed
+    byte[block][spindle_speed] := byte[pl_data][spindle_speed]
 #endif
 #ifdef USE_LINE_NUMBERS
-    block->line_number := pl_data->line_number
+    byte[block][line_number] := byte[pl_data][line_number]
 #endif
 
     ' Compute and store initial move distance data.
@@ -310,7 +307,7 @@ PUB{uint8_t} plan_buffer_line({float *}target, {plan_line_data_t *}pl_data) | {p
     ' {uint8_t} idx
 
     ' Copy position data based on type of motion being planned.
-    if (block->condition & PL_COND_FLAG_SYSTEM_MOTION) 
+    if (byte[block][condition] & PL_COND_FLAG_SYSTEM_MOTION) 
 #ifdef COREXY
         position_steps[X_AXIS] := system_convert_corexy_to_x_axis_steps(sys_position)
         position_steps[Y_AXIS] := system_convert_corexy_to_y_axis_steps(sys_position)
@@ -323,8 +320,8 @@ PUB{uint8_t} plan_buffer_line({float *}target, {plan_line_data_t *}pl_data) | {p
 #ifdef COREXY
     target_steps[A_MOTOR] := lround(target[A_MOTOR] * settings.steps_per_mm[A_MOTOR])
     target_steps[B_MOTOR] := lround(target[B_MOTOR] * settings.steps_per_mm[B_MOTOR])
-    block->steps[A_MOTOR] := labs((target_steps[X_AXIS]-position_steps[X_AXIS]) + (target_steps[Y_AXIS]-position_steps[Y_AXIS]))
-    block->steps[B_MOTOR] := labs((target_steps[X_AXIS]-position_steps[X_AXIS]) - (target_steps[Y_AXIS]-position_steps[Y_AXIS]))
+    byte[block][steps[A_MOTOR]] := labs((target_steps[X_AXIS]-position_steps[X_AXIS]) + (target_steps[Y_AXIS]-position_steps[Y_AXIS]))
+    byte[block][steps[B_MOTOR]] := labs((target_steps[X_AXIS]-position_steps[X_AXIS]) - (target_steps[Y_AXIS]-position_steps[Y_AXIS]))
 #endif
     repeat idx from 0 to N_AXIS-1 
     ' Calculate target position in absolute steps, number of steps for each axis, and determine max step events.
@@ -333,8 +330,8 @@ PUB{uint8_t} plan_buffer_line({float *}target, {plan_line_data_t *}pl_data) | {p
 #ifdef COREXY
         if (NOT(idx== A_MOTOR) AND NOT(idx == B_MOTOR))
             target_steps[idx] := lround(target[idx]*settings.steps_per_mm[idx])
-            block->steps[idx] := labs(target_steps[idx]-position_steps[idx])
-        block->step_event_count := max(block->step_event_count, block->steps[idx])
+            byte[block][steps[idx]] := labs(target_steps[idx]-position_steps[idx])
+        byte[block][step_event_count] := max(byte[block][step_event_count], byte[block][steps[idx]])
         if (idx == A_MOTOR)
             delta_mm := (target_steps[X_AXIS]-position_steps[X_AXIS] + target_steps[Y_AXIS]-position_steps[Y_AXIS])/settings.steps_per_mm[idx]
         elseif (idx == B_MOTOR) 
@@ -343,43 +340,43 @@ PUB{uint8_t} plan_buffer_line({float *}target, {plan_line_data_t *}pl_data) | {p
             delta_mm := (target_steps[idx] - position_steps[idx])/settings.steps_per_mm[idx]
 #else
         target_steps[idx] := lround(target[idx]*settings.steps_per_mm[idx])
-        block->steps[idx] := labs(target_steps[idx]-position_steps[idx])
-        block->step_event_count := max(block->step_event_count, block->steps[idx])
+        byte[block][steps[idx]] := labs(target_steps[idx]-position_steps[idx])
+        byte[block][step_event_count] := max(byte[block][step_event_count], byte[block][steps[idx]])
         delta_mm := (target_steps[idx] - position_steps[idx])/settings.steps_per_mm[idx]
 #endif
     unit_vec[idx] := delta_mm ' Store unit vector numerator
 
     ' Set direction bits. Bit enabled always means direction is negative.
     if (delta_mm < 0.0 )
-        block->direction_bits |= get_direction_pin_mask(idx) 
+        byte[block][direction_bits] |= get_direction_pin_mask(idx) 
 
     ' Bail if this is a zero-length block. Highly unlikely to occur.
-    if (block->step_event_count == 0)
+    if (byte[block][step_event_count] == 0)
         return(PLAN_EMPTY_BLOCK) 
 
     ' Calculate the unit vector of the line move and the block maximum feed rate and acceleration scaled
     ' down such that no individual axes maximum values are exceeded with respect to the line direction.
     ' NOTE: This calculation assumes all axes are orthogonal (Cartesian) and works with ABC-axes,
     ' if they are also orthogonal/independent. Operates on the absolute value of the unit vector.
-    block->millimeters := convert_delta_vector_to_unit_vector(unit_vec)
-    block->acceleration := limit_value_by_axis_maximum(settings.acceleration, unit_vec)
-    block->rapid_rate := limit_value_by_axis_maximum(settings.max_rate, unit_vec)
+    byte[block][millimeters] := convert_delta_vector_to_unit_vector(unit_vec)
+    byte[block][acceleration] := limit_value_by_axis_maximum(settings.acceleration, unit_vec)
+    byte[block][rapid_rate] := limit_value_by_axis_maximum(settings.max_rate, unit_vec)
 
     ' Store programmed rate.
-    if (block->condition & PL_COND_FLAG_RAPID_MOTION)
-        block->programmed_rate := block->rapid_rate
+    if (byte[block][condition] & PL_COND_FLAG_RAPID_MOTION)
+        byte[block][programmed_rate] := byte[block][rapid_rate]
     else
-        block->programmed_rate := pl_data->feed_rate
-        if (block->condition & PL_COND_FLAG_INVERSE_TIME)
-            block->programmed_rate *= block->millimeters
+        byte[block][programmed_rate] := byte[pl_data][feed_rate]
+        if (byte[block][condition] & PL_COND_FLAG_INVERSE_TIME)
+            byte[block][programmed_rate] *= byte[block][millimeters]
 
   ' TODO: Need to check this method handling zero junction speeds when starting from rest.
-    if ((block_buffer_head== block_buffer_tail) OR (block->condition & PL_COND_FLAG_SYSTEM_MOTION))
+    if ((block_buffer_head == block_buffer_tail) OR (byte[block][condition] & PL_COND_FLAG_SYSTEM_MOTION))
 
     ' Initialize block entry speed as zero. Assume it will be starting from rest. Planner will correct this later.
     ' If system motion, the system motion block always is assumed to start from rest and end at a complete stop.
-        block->entry_speed_sqr := 0.0
-        block->max_junction_speed_sqr := 0.0 ' Starting from rest. Enforce start from zero velocity.
+        byte[block][entry_speed_sqr] := 0.0
+        byte[block][max_junction_speed_sqr] := 0.0 ' Starting from rest. Enforce start from zero velocity.
     else 
     ' Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     ' Let a circle be tangent to both previous and current path line segments, where the junction
@@ -415,15 +412,15 @@ PUB{uint8_t} plan_buffer_line({float *}target, {plan_line_data_t *}pl_data) | {p
     else 
         if (junction_cos_theta < -0.999999) 
             ' Junction is a straight line or 180 degrees. Junction speed is infinite.
-            block->max_junction_speed_sqr := SOME_LARGE_VALUE
+            byte[block][max_junction_speed_sqr] := SOME_LARGE_VALUE
         else 
             convert_delta_vector_to_unit_vector(junction_unit_vec)
             junction_acceleration := limit_value_by_axis_maximum(settings.acceleration, junction_unit_vec)
             sin_theta_d2 := sqrt(0.5*(1.0-junction_cos_theta)) ' Trig half angle identity. Always positive.
-            block->max_junction_speed_sqr := max(MINIMUM_JUNCTION_SPEED*MINIMUM_JUNCTION_SPEED, (junction_acceleration * settings.junction_deviation * sin_theta_d2)/(1.0-sin_theta_d2))
+            byte[block][max_junction_speed_sqr] := max(MINIMUM_JUNCTION_SPEED*MINIMUM_JUNCTION_SPEED, (junction_acceleration * settings.junction_deviation * sin_theta_d2)/(1.0-sin_theta_d2))
 
     ' Block system motion from updating this data to ensure next g-code motion is computed correctly.
-    if (NOT(block->condition & PL_COND_FLAG_SYSTEM_MOTION)) 
+    if (NOT(byte[block][condition] & PL_COND_FLAG_SYSTEM_MOTION)) 
         nominal_speed := plan_compute_profile_nominal_speed(block)
         plan_compute_profile_parameters(block, nominal_speed, pl.previous_nominal_speed)
         pl.previous_nominal_speed := nominal_speed
